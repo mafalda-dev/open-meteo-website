@@ -1,0 +1,456 @@
+<script lang="ts">
+	import Zap from 'lucide-svelte/icons/zap';
+	import Gauge from 'lucide-svelte/icons/gauge';
+	import Watch from 'lucide-svelte/icons/watch';
+	import Waves from 'lucide-svelte/icons/waves';
+	import Archive from 'lucide-svelte/icons/archive';
+	import Lightbulb from 'lucide-svelte/icons/lightbulb';
+	import FileCheck from 'lucide-svelte/icons/file-check';
+	import MapPinned from 'lucide-svelte/icons/map-pinned';
+	import MountainSnow from 'lucide-svelte/icons/mountain-snow';
+
+	import Mailbox from '$lib/assets/icons/mailbox.svelte';
+
+	import Button from '$lib/components/ui/button/button.svelte';
+
+	import { onMount } from 'svelte';
+	import {
+		countVariables,
+		sliceIntoChunks,
+		countPressureVariables,
+		altitudeAboveSeaLevelMeters
+	} from '$lib/utils/meteo';
+	import { urlHashStore } from '$lib/stores/url-hash-store';
+	import { Input } from '$lib/components/ui/input';
+	import LocationSelection from '$lib/components/location/location-selection.svelte';
+	import ResultPreview from '$lib/components/highcharts/result-preview.svelte';
+	import LicenseSelector from '$lib/components/license/license-selector.svelte';
+	import DatePicker from '$lib/components/date/date-picker.svelte';
+	import Settings from '$lib/components/settings/settings.svelte';
+	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { Label } from '$lib/components/ui/label';
+	import * as Accordion from '$lib/components/ui/accordion';
+	import AccordionItem from '$lib/components/accordion/accordion-item.svelte';
+	import * as Select from '$lib/components/ui/select';
+	import * as ToggleGroup from '$lib/components/ui/toggle-group';
+	import {
+		hourly,
+		models,
+		solarVariables,
+		windVariables,
+		defaultParameters,
+		pressureVariables,
+		additionalVariables,
+		referenceDatasets,
+		skillScores
+	} from './options';
+	import {
+		pastHoursOptions,
+		forecastHoursOptions,
+		gridCellSelectionOptions,
+		temporalResolutionOptions,
+	} from '../options';
+
+	let d = new Date();
+	d.setDate(d.getDate() - 2);
+	let endDateDefault = d.toISOString().split('T')[0];
+	d.setDate(d.getDate() - 14);
+	let startDateDefault = d.toISOString().split('T')[0];
+	
+	const params = urlHashStore({
+		latitude: [52.52],
+		longitude: [13.41],
+		start_date: startDateDefault,
+		end_date: endDateDefault,
+		...defaultParameters,
+		hourly: ['temperature_2m']
+	});
+
+	let begin_date = new Date('2024-01-01');
+	let last_date = new Date();
+	last_date.setDate(last_date.getDate() - 2);
+
+	// Additional variable settings
+	let forecastHours = $derived(
+		forecastHoursOptions.find((fho) => String(fho.value) == $params.forecast_hours)
+	);
+	let pastHours = $derived(pastHoursOptions.find((pho) => String(pho.value) == $params.past_hours));
+	let temporalResolution = $derived(
+		temporalResolutionOptions.find((tro) => String(tro.value) == $params.temporal_resolution)
+	);
+	let cellSelection = $derived(
+		gridCellSelectionOptions.find((gcso) => String(gcso.value) == $params.cell_selection)
+	);
+
+	let accordionValues: string[] = $state([]);
+	onMount(() => {
+		if (
+			(countVariables(additionalVariables, $params.hourly).active ||
+				(pastHours ? pastHours.value : false) ||
+				(cellSelection ? cellSelection.value : false) ||
+				(forecastHours ? forecastHours.value : false) ||
+				(temporalResolution ? temporalResolution.value : false)) &&
+			!accordionValues.includes('additional-variables')
+		) {
+			accordionValues.push('additional-variables');
+		}
+
+		if (
+			(countVariables(solarVariables, $params.hourly).active ||
+				($params.tilt ? $params.tilt > 0 : false) ||
+				($params.azimuth ? $params.azimuth > 0 : false)) &&
+			!accordionValues.includes('solar-variables')
+		) {
+			accordionValues.push('solar-variables');
+		}
+
+	});
+
+
+
+	// function(params) -> return highcharts
+	let result = $derived(
+		((params: any) => {
+			return "AAAAA"
+		})($params)
+	);
+</script>
+
+<svelte:head>
+	<title>⚡️ Forecast performance | Open-Meteo.com</title>
+	<link rel="canonical" href="https://open-meteo.com/en/evaluation/forecast-performance" />
+	<meta
+		name="description"
+		content=""
+	/>
+</svelte:head>
+
+<div class="container my-12">
+	<!-- LOCATION -->
+	<LocationSelection bind:params={$params} />
+	
+	<!-- TIME -->
+	<div class="mt-6 flex flex-col gap-4 lg:flex-row">
+		<div class="mb-3 lg:w-1/2">
+			<DatePicker
+				bind:start_date={$params.start_date}
+				bind:end_date={$params.end_date}
+				{begin_date}
+				{last_date}
+			/>
+		</div>
+	</div>
+
+	<!-- VARIABLES -->
+	<div class="mt-6 md:mt-12">
+		<h2 id="weather_variables" class="text-2xl md:text-3xl">Weather Variables</h2>
+		<div
+			class="mt-2 grid grid-flow-row gap-x-2 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+		>
+			{#each hourly as group}
+				<div>
+					{#each group as e}
+						<div class="group flex items-center" title={e.label}>
+							<Checkbox
+								id="{e.value}_hourly"
+								class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
+								value={e.value}
+								checked={$params.hourly?.includes(e.value)}
+								aria-labelledby="{e.value}_label"
+								onCheckedChange={() => {
+									if ($params.hourly?.includes(e.value)) {
+										$params.hourly = $params.hourly.filter((item) => {
+											return item !== e.value;
+										});
+									} else {
+										$params.hourly.push(e.value);
+										$params.hourly = $params.hourly;
+									}
+								}}
+							/>
+							<Label
+								id="{e.value}_label"
+								for="{e.value}_hourly"
+								class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
+							>
+						</div>
+					{/each}
+				</div>
+			{/each}
+		</div>
+	</div>
+
+	<!-- ADDITIONAL VARIABLES -->
+	<div class="mt-6">
+		<Accordion.Root class="border-border rounded-lg border" bind:value={accordionValues}>
+			<AccordionItem
+				id="solar-variables"
+				title="Solar Radiation Variables"
+				count={countVariables(solarVariables, $params.hourly)}
+			>
+				<div class="grid md:grid-cols-2">
+					{#each solarVariables as group}
+						<div>
+							{#each group as e}
+								<div class="group flex items-center" title={e.label}>
+									<Checkbox
+										id="{e.value}_hourly"
+										class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
+										value={e.value}
+										checked={$params.hourly?.includes(e.value)}
+										aria-labelledby="{e.value}_hourly_label"
+										onCheckedChange={() => {
+											if ($params.hourly?.includes(e.value)) {
+												$params.hourly = $params.hourly.filter((item) => {
+													return item !== e.value;
+												});
+											} else {
+												$params.hourly.push(e.value);
+												$params.hourly = $params.hourly;
+											}
+										}}
+									/>
+									<Label
+										id="{e.value}_hourly_label"
+										for="{e.value}_hourly"
+										class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
+									>
+								</div>
+							{/each}
+						</div>
+					{/each}
+				</div>
+
+				<small class="text-muted-foreground mt-1">
+					Note: Solar radiation is averaged over the past hour. Use
+					<mark>instant</mark> for radiation at the indicated time. For global tilted irradiance GTI
+					please specify Tilt and Azimuth below.
+				</small>
+
+				<div class="mt-3 grid grid-cols-1 gap-3 md:mt-6 md:grid-cols-2 md:gap-6">
+					<div class="relative">
+						<Input
+							id="tilt"
+							type="number"
+							class="h-12 cursor-pointer pt-6 {$params.tilt < 0 || $params.tilt > 90
+								? 'text-red'
+								: ''}"
+							name="tilt"
+							step="1"
+							min="0"
+							max="90"
+							bind:value={$params.tilt}
+						/>
+						<Label
+							class="text-muted-foreground absolute left-2 top-[0.35rem] z-10 px-1 text-xs"
+							for="tilt">Panel Tilt (0° horizontal)</Label
+						>
+						{#if $params.tilt < 0 || $params.tilt > 90}
+							<div class="invalid-tooltip" transition:slide>Tilt must be between 0° and 90°</div>
+						{/if}
+					</div>
+
+					<div class="relative">
+						<Input
+							type="number"
+							class="h-12 cursor-pointer pt-6 {$params.azimuth < -180 || $params.azimuth > 180
+								? 'text-red'
+								: ''}"
+							name="azimuth"
+							id="azimuth"
+							step="1"
+							min="-180"
+							max="180"
+							bind:value={$params.azimuth}
+						/>
+						<Label
+							class="text-muted-foreground absolute left-2 top-[0.35rem] z-10 px-1 text-xs"
+							for="azimuth">Panel Azimuth (0° S, -90° E, 90° W, ±180° N)</Label
+						>
+						{#if Number($params.azimuth) < -180 || Number($params.azimuth) > 180}
+							<div class="invalid-tooltip" transition:slide>
+								Azimuth must be between -180° (north) and 180° (north)
+							</div>
+						{/if}
+					</div>
+				</div>
+			</AccordionItem>
+			<AccordionItem
+				id="wind-variables"
+				title="Wind at 80, 120 and 180 meters"
+				count={countVariables(windVariables, $params.hourly)}
+			>
+				<div class="grid md:grid-cols-2">
+					{#each windVariables as group}
+						<div>
+							{#each group as e}
+								<div class="group flex items-center" title={e.label}>
+									<Checkbox
+										id="{e.value}_hourly"
+										class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
+										value={e.value}
+										checked={$params.hourly?.includes(e.value)}
+										aria-labelledby="{e.value}_hourly_label"
+										onCheckedChange={() => {
+											if ($params.hourly?.includes(e.value)) {
+												$params.hourly = $params.hourly.filter((item) => {
+													return item !== e.value;
+												});
+											} else {
+												$params.hourly.push(e.value);
+												$params.hourly = $params.hourly;
+											}
+										}}
+									/>
+									<Label
+										id="{e.value}_hourly_label"
+										for="{e.value}_hourly"
+										class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
+									>
+								</div>
+							{/each}
+						</div>
+					{/each}
+				</div>
+			</AccordionItem>
+		</Accordion.Root>
+	</div>
+
+	<!-- MODELS -->
+	<div class="mt-6 md:mt-12">
+		<h2 id="weather_models" class="text-2xl md:text-3xl">Weather Models</h2>
+		<div
+			class="mt-2 grid grid-flow-row gap-x-2 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+		>
+			{#each models as group}
+				<div>
+					{#each group as e}
+						<div class="group flex items-center" title={e.label}>
+							<Checkbox
+								id="{e.value}_model"
+								class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
+								value={e.value}
+								checked={$params.models?.includes(e.value)}
+								aria-labelledby="{e.value}_label"
+								onCheckedChange={() => {
+									if ($params.models?.includes(e.value)) {
+										$params.models = $params.models.filter((item) => {
+											return item !== e.value;
+										});
+									} else {
+										$params.models.push(e.value);
+										$params.models = $params.models;
+									}
+								}}
+							/>
+							<Label
+								id="{e.value}_model_label"
+								for="{e.value}_model"
+								class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
+							>
+						</div>
+					{/each}
+				</div>
+			{/each}
+		</div>
+		<div>
+			<small class="text-muted-foreground"
+				>Note: The default <mark>Best Match</mark> provides the best forecast for any given
+				location worldwide. <mark>Seamless</mark> combines all models from a given provider into
+				a seamless prediction.</small
+			>
+		</div>
+	</div>
+
+	<!-- REFERENCE -->
+	<div class="mt-6 md:mt-12">
+		<h2 id="reference" class="text-2xl md:text-3xl">Reference data</h2>
+		<div
+			class="mt-2 grid grid-flow-row gap-x-2 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+		>
+			{#each referenceDatasets as group}
+				<div>
+					{#each group as e}
+						<div class="group flex items-center" title={e.label}>
+							<Checkbox
+								id="{e.value}_ref"
+								class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
+								value={e.value}
+								checked={$params.models?.includes(e.value)}
+								aria-labelledby="{e.value}_label"
+								onCheckedChange={() => {
+									if ($params.models?.includes(e.value)) {
+										$params.models = $params.models.filter((item) => {
+											return item !== e.value;
+										});
+									} else {
+										$params.models.push(e.value);
+										$params.models = $params.models;
+									}
+								}}
+							/>
+							<Label
+								id="{e.value}_model_label"
+								for="{e.value}_model"
+								class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
+							>
+						</div>
+					{/each}
+				</div>
+			{/each}
+		</div>
+	</div>
+
+	<!-- SKILL SCORES -->
+	<div class="mt-6 md:mt-12">
+		<h2 id="skill-scores" class="text-2xl md:text-3xl">Skill scores</h2>
+		<div
+			class="mt-2 grid grid-flow-row gap-x-2 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+		>
+			{#each skillScores as group}
+				<div>
+					{#each group as e}
+						<div class="group flex items-center" title={e.label}>
+							<Checkbox
+								id="{e.value}_skill"
+								class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
+								value={e.value}
+								checked={$params.models?.includes(e.value)}
+								aria-labelledby="{e.value}_label"
+								onCheckedChange={() => {
+									// if ($params.models?.includes(e.value)) {
+									// 	$params.models = $params.models.filter((item) => {
+									// 		return item !== e.value;
+									// 	});
+									// } else {
+									// 	$params.models.push(e.value);
+									// 	$params.models = $params.models;
+									// }
+								}}
+							/>
+							<Label
+								id="{e.value}_skill_label"
+								for="{e.value}_skill"
+								class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
+							>
+						</div>
+					{/each}
+				</div>
+			{/each}
+		</div>
+	</div>
+
+	<!-- SETTINGS -->
+	<div class="mt-6 md:mt-12">
+		<Settings bind:params={$params} />
+	</div>
+
+	<!-- LICENSE -->
+	<div class="mt-3 md:mt-6"><LicenseSelector /></div>
+
+</div>
+
+<!-- RESULT -->
+<div class="mt-6 md:mt-12">
+	<ResultPreview {params} {defaultParameters} type="previous-runs" useStockChart={true} />
+</div>
