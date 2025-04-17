@@ -293,7 +293,7 @@
 			</div>
 			<div>
 				<div>
-					<h3 class="text-3xl font-bold">Marine, Air Quality, and Floods</h3>
+					<h3 class="text-3xl font-bold">Marine, Air Quality and Floods</h3>
 					<h4 class="mb-3 text-xl font-light">Comprehensive Environmental Analysis!</h4>
 					<p>
 						Dive into the world of marine weather with our <a
@@ -322,7 +322,7 @@
 			</div>
 			<div>
 				<div>
-					<h3 class="text-3xl font-bold">Geocoding, and Elevation</h3>
+					<h3 class="text-3xl font-bold">Geocoding and Elevation</h3>
 					<h4 class="mb-3 text-xl font-light">Disclose Location Insights!</h4>
 					<p>
 						Discover any city or town worldwide with our <a
