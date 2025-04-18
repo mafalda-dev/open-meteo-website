@@ -66,7 +66,8 @@
 		start_date: startDateDefault,
 		end_date: endDateDefault,
 		...defaultParameters,
-		hourly: ['temperature_2m']
+		hourly: ['temperature_2m'],
+		reference: ["day0"],
 	});
 
 	let begin_date = new Date('2024-01-01');
@@ -111,7 +112,6 @@
 
 	function calculateMetrics(reference: Record<string, number>, forecast: Record<string, number>) {
 		const keys = Object.keys(reference);
-		const n = keys.length;
 
 		let mbe = 0, mae = 0, rmse = 0;
 		let refValues: number[] = [], forecastValues: number[] = [];
@@ -120,7 +120,8 @@
 			const ref = reference[key];
 			const pred = forecast[key];
 
-			if (ref === 0) continue; // avoid division by zero
+			// Skip if either value is null/undefined or reference is zero (to avoid division by 0)
+			if (ref == null || pred == null || ref === 0) continue;
 
 			const diff = pred - ref;
 			mbe += diff / ref;
@@ -130,13 +131,17 @@
 			refValues.push(ref);
 			forecastValues.push(pred);
 		}
+		const count = refValues.length;
+		if (count === 0) {
+			return { rMBE: NaN, rMAE: NaN, rRMSE: NaN, correlation: NaN };
+		}
 
-		const rMBE = mbe / n * 100;
-		const rMAE = mae / n * 100;
-		const rRMSE = Math.sqrt(rmse / n) * 100;
-		const correlation = pearsonCorrelation(refValues, forecastValues);
+		const rMBE = mbe / count * 100;
+		const rMAE = mae / count * 100;
+		const rRMSE = Math.sqrt(rmse / count) * 100;
+		const corr = pearsonCorrelation(refValues, forecastValues);
 
-		return { rMBE, rMAE, rRMSE, correlation };
+		return { rMBE, rMAE, rRMSE, corr };
 		}
 	
 	function pearsonCorrelation(x: number[], y: number[]): number {
@@ -162,14 +167,28 @@
 
 	async function load(formParams: Parameters) {
 		const variable = formParams.hourly
-		const reference = formParams.models[-1]  // the last one is the reference data
-		const models = (reference=="day0") ? formParams.models.slice(0, -1) : formParams.models
+		const reference_model = formParams.reference
+
+		var reference = []
+		if (reference_model!="day0") {
+			const params = {
+				"latitude": formParams.latitude,
+				"longitude": formParams.longitude,
+				"hourly": variable,
+				"models": reference_model,
+				"start_date": formParams.start_date,
+				"end_date": formParams.end_date,
+			};
+			const url = (reference_model == "era5_seamless") ? "https://archive-api.open-meteo.com/v1/archive" : "https://satellite-api.open-meteo.com/v1/archive";
+			const responses = await fetchWeatherApi(url, params);
+			reference = responses[0].hourly()!.variables(0)!.valuesArray()!
+		}
 
 		const params = {
 			"latitude": formParams.latitude,
 			"longitude": formParams.longitude,
 			"hourly": [variable, variable+"_previous_day1", variable+"_previous_day2", variable+"_previous_day3", variable+"_previous_day4", variable+"_previous_day5", variable+"_previous_day6", variable+"_previous_day7"],
-			"models": models,  // the last one is the reference data
+			"models": formParams.models,
 			"start_date": formParams.start_date,
 			"end_date": formParams.end_date,
 		};
@@ -181,10 +200,6 @@
 
 		// Attributes for timezone and location
 		const utcOffsetSeconds = response.utcOffsetSeconds();
-		// const timezone = response.timezone();
-		// const timezoneAbbreviation = response.timezoneAbbreviation();
-		// const latitude = response.latitude();
-		// const longitude = response.longitude();
 
 		const hourly = response.hourly()!;
 
@@ -193,7 +208,7 @@
 				time: [...Array((Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval())].map(
 					(_, i) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds) * 1000)
 				),
-				reference: hourly.variables(0)!.valuesArray()!, // (reference=="day0") ? hourly.variables(0)!.valuesArray()! : responses[-1].hourly()!.variables(0)!.valuesArray()!,
+				reference: (reference_model=="day0") ? hourly.variables(0)!.valuesArray()! : reference,
 				variablePreviousDay1: hourly.variables(1)!.valuesArray()!,
 				variablePreviousDay2: hourly.variables(2)!.valuesArray()!,
 				variablePreviousDay3: hourly.variables(3)!.valuesArray()!,
@@ -216,7 +231,7 @@
 				rMBE.push(metrics.rMBE);
 				rMAE.push(metrics.rMAE);
 				rRMSE.push(metrics.rRMSE);
-				correlation.push(metrics.correlation);
+				correlation.push(metrics.corr);
 			}
 		}
 
@@ -224,12 +239,12 @@
 		let highcharts = {
 
 			title: {
-				text: 'Forecast performance from ' + formParams.start_date +' to '+ formParams.end_date,
+				text: 'Forecast performance at ' + formParams.latitude + '°, ' + formParams.longitude + '°',
 				align: 'left'
 			},
 
 			subtitle: {
-				text: 'Models performance comparison at different lead times',
+				text: 'Models performance comparison at different lead times from ' + formParams.start_date +' to '+ formParams.end_date,
 				align: 'left'
 			},
 
@@ -250,6 +265,9 @@
 			}],
 
 			xAxis: {
+				title: {
+					text: 'Previous days'
+				},
 				accessibility: {
 					rangeDescription: 'Previous days'
 				}
@@ -303,7 +321,10 @@
 			let table = {
 				weatherData: weatherData,
 				params: params,
-				rmse: [1,2,3,4]
+				rmbe: rMBE,
+				rmae: rMAE,
+				rmse: rRMSE,
+				correlation: correlation,
 			}
 			return {table: table, highcharts: highcharts}
 	}
@@ -572,16 +593,16 @@
 								id="{e.value}_ref"
 								class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
 								value={e.value}
-								checked={$params.models?.includes(e.value)}
+								checked={$params.reference?.includes(e.value)}
 								aria-labelledby="{e.value}_label"
 								onCheckedChange={() => {
-									if ($params.models?.includes(e.value)) {
-										$params.models = $params.models.filter((item) => {
+									if ($params.reference?.includes(e.value)) {
+										$params.reference = $params.reference.filter((item) => {
 											return item !== e.value;
 										});
 									} else {
-										$params.models.push(e.value);
-										$params.models = $params.models;
+										$params.reference.push(e.value);
+										$params.reference = $params.reference;
 									}
 								}}
 							/>
