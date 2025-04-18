@@ -8,6 +8,8 @@
 	import FileCheck from 'lucide-svelte/icons/file-check';
 	import MapPinned from 'lucide-svelte/icons/map-pinned';
 	import MountainSnow from 'lucide-svelte/icons/mountain-snow';
+	import { fetchWeatherApi } from 'openmeteo';
+	import { slide } from 'svelte/transition';
 
 	import Mailbox from '$lib/assets/icons/mailbox.svelte';
 
@@ -50,6 +52,7 @@
 		gridCellSelectionOptions,
 		temporalResolutionOptions,
 	} from '../options';
+	import HighchartsContainer from '$lib/components/highcharts/highcharts-container.svelte';
 
 	let d = new Date();
 	d.setDate(d.getDate() - 2);
@@ -106,14 +109,207 @@
 
 	});
 
+	function calculateMetrics(reference: Record<string, number>, forecast: Record<string, number>) {
+		const keys = Object.keys(reference);
+		const n = keys.length;
 
+		let mbe = 0, mae = 0, rmse = 0;
+		let refValues: number[] = [], forecastValues: number[] = [];
+
+		for (const key of keys) {
+			const ref = reference[key];
+			const pred = forecast[key];
+
+			if (ref === 0) continue; // avoid division by zero
+
+			const diff = pred - ref;
+			mbe += diff / ref;
+			mae += Math.abs(diff) / ref;
+			rmse += (diff * diff) / (ref * ref);
+
+			refValues.push(ref);
+			forecastValues.push(pred);
+		}
+
+		const rMBE = mbe / n * 100;
+		const rMAE = mae / n * 100;
+		const rRMSE = Math.sqrt(rmse / n) * 100;
+		const correlation = pearsonCorrelation(refValues, forecastValues);
+
+		return { rMBE, rMAE, rRMSE, correlation };
+		}
+	
+	function pearsonCorrelation(x: number[], y: number[]): number {
+		const n = x.length;
+		const meanX = x.reduce((a, b) => a + b, 0) / n;
+		const meanY = y.reduce((a, b) => a + b, 0) / n;
+
+		let numerator = 0;
+		let denomX = 0;
+		let denomY = 0;
+
+		for (let i = 0; i < n; i++) {
+			const dx = x[i] - meanX;
+			const dy = y[i] - meanY;
+			numerator += dx * dy;
+			denomX += dx * dx;
+			denomY += dy * dy;
+		}
+
+		return numerator / Math.sqrt(denomX * denomY);
+		}
+
+
+	async function load(formParams: Parameters) {
+		const variable = formParams.hourly
+		const reference = formParams.models[-1]  // the last one is the reference data
+		const models = (reference=="day0") ? formParams.models.slice(0, -1) : formParams.models
+
+		const params = {
+			"latitude": formParams.latitude,
+			"longitude": formParams.longitude,
+			"hourly": [variable, variable+"_previous_day1", variable+"_previous_day2", variable+"_previous_day3", variable+"_previous_day4", variable+"_previous_day5", variable+"_previous_day6", variable+"_previous_day7"],
+			"models": models,  // the last one is the reference data
+			"start_date": formParams.start_date,
+			"end_date": formParams.end_date,
+		};
+		const url = "https://previous-runs-api.open-meteo.com/v1/forecast";
+		const responses = await fetchWeatherApi(url, params);
+
+		// Process first location. Add a for-loop for multiple locations or weather models
+		const response = responses[0];
+
+		// Attributes for timezone and location
+		const utcOffsetSeconds = response.utcOffsetSeconds();
+		// const timezone = response.timezone();
+		// const timezoneAbbreviation = response.timezoneAbbreviation();
+		// const latitude = response.latitude();
+		// const longitude = response.longitude();
+
+		const hourly = response.hourly()!;
+
+		// Note: The order of weather variables in the URL query and the indices below need to match!
+		const weatherData = {
+				time: [...Array((Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval())].map(
+					(_, i) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds) * 1000)
+				),
+				reference: hourly.variables(0)!.valuesArray()!, // (reference=="day0") ? hourly.variables(0)!.valuesArray()! : responses[-1].hourly()!.variables(0)!.valuesArray()!,
+				variablePreviousDay1: hourly.variables(1)!.valuesArray()!,
+				variablePreviousDay2: hourly.variables(2)!.valuesArray()!,
+				variablePreviousDay3: hourly.variables(3)!.valuesArray()!,
+				variablePreviousDay4: hourly.variables(4)!.valuesArray()!,
+				variablePreviousDay5: hourly.variables(5)!.valuesArray()!,
+				variablePreviousDay6: hourly.variables(6)!.valuesArray()!,
+				variablePreviousDay7: hourly.variables(7)!.valuesArray()!,
+		};
+
+		// Initialize arrays to hold skill scores
+		const rMBE: number[] = [];
+		const rMAE: number[] = [];
+		const rRMSE: number[] = [];
+		const correlation: number[] = [];
+
+		// Loop and fill score arrays
+		for (const key in weatherData) {
+			if (key.startsWith("variablePreviousDay")) {
+				const metrics = calculateMetrics(weatherData.reference, weatherData[key]);
+				rMBE.push(metrics.rMBE);
+				rMAE.push(metrics.rMAE);
+				rRMSE.push(metrics.rRMSE);
+				correlation.push(metrics.correlation);
+			}
+		}
+
+
+		let highcharts = {
+
+			title: {
+				text: 'Forecast performance from ' + formParams.start_date +' to '+ formParams.end_date,
+				align: 'left'
+			},
+
+			subtitle: {
+				text: 'Models performance comparison at different lead times',
+				align: 'left'
+			},
+
+			yAxis: [{
+				title: {
+					text: 'Skill score (%)'
+				},
+				// min: 0,
+				// max: 100
+			},
+			{
+				title: {
+					text: 'Correlation'
+				},
+				// min: 0,
+				max: 1,
+				opposite: true
+			}],
+
+			xAxis: {
+				accessibility: {
+					rangeDescription: 'Previous days'
+				}
+			},
+
+			legend: {
+				layout: 'vertical',
+				align: 'right',
+				verticalAlign: 'middle'
+			},
+
+			plotOptions: {
+				series: {
+					label: {
+						connectorAllowed: false
+					},
+					pointStart: 1
+				}
+			},
+
+			series: [{
+				name: 'rMBE',
+				data: rMBE
+			}, {
+				name: 'rMAE',
+				data: rMAE
+			}, {
+				name: 'rRMSE',
+				data: rRMSE
+			}, {
+				name: 'Correlation',
+				data: correlation,
+				yAxis: 1
+			}],
+			responsive: {
+				rules: [{
+					condition: {
+						maxWidth: 500
+					},
+					chartOptions: {
+						legend: {
+							layout: 'horizontal',
+							align: 'center',
+							verticalAlign: 'bottom'
+						}
+					}
+				}]
+			}
+
+			}
+			let table = {
+				weatherData: weatherData,
+				params: params,
+				rmse: [1,2,3,4]
+			}
+			return {table: table, highcharts: highcharts}
+	}
 
 	// function(params) -> return highcharts
-	let result = $derived(
-		((params: any) => {
-			return "AAAAA"
-		})($params)
-	);
+	let result = $derived((load)($params));
 </script>
 
 <svelte:head>
@@ -448,9 +644,16 @@
 	<!-- LICENSE -->
 	<div class="mt-3 md:mt-6"><LicenseSelector /></div>
 
+	<!-- RESULT -->
+	<div class="mt-6 md:mt-12">
+		{#await result}
+		loading
+		{:then result}
+		<HighchartsContainer options={result.highcharts}></HighchartsContainer>
+		<pre>{JSON.stringify(result, null, 2)}</pre>
+		{:catch error}
+		Error: {error}
+		{/await}
+	</div>
 </div>
 
-<!-- RESULT -->
-<div class="mt-6 md:mt-12">
-	<ResultPreview {params} {defaultParameters} type="previous-runs" useStockChart={true} />
-</div>
