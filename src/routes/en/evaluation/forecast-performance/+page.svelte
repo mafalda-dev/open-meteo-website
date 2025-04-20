@@ -113,34 +113,30 @@
 	function calculateMetrics(reference: Record<string, number>, forecast: Record<string, number>) {
 		const keys = Object.keys(reference);
 
-		let mbe = 0, mae = 0, rmse = 0;
-		let refValues: number[] = [], forecastValues: number[] = [];
+		let refValues: number[] = [], forecastValues: number[] = [], differences: number[] = [];
 
 		for (const key of keys) {
 			const ref = reference[key];
 			const pred = forecast[key];
 
-			// Skip if either value is null/undefined or reference is zero (to avoid division by 0)
-			if (ref == null || pred == null || ref === 0) continue;
+			// Skip if either value is null/undefined
+			if (ref == null || pred == null || isNaN(ref) || isNaN(pred)) continue;
 
-			const diff = pred - ref;
-			mbe += diff / ref;
-			mae += Math.abs(diff) / ref;
-			rmse += (diff * diff) / (ref * ref);
+			const diff = ref - pred;
 
+			differences.push(diff);
 			refValues.push(ref);
 			forecastValues.push(pred);
 		}
-		const count = refValues.length;
+		const count = differences.length;
 		if (count === 0) {
-			return { rMBE: NaN, rMAE: NaN, rRMSE: NaN, correlation: NaN };
+			return { rMBE: NaN, rMAE: NaN, rRMSE: NaN, corr: NaN };
 		}
-
-		const rMBE = mbe / count * 100;
-		const rMAE = mae / count * 100;
-		const rRMSE = Math.sqrt(rmse / count) * 100;
+		const avgRef = refValues.reduce((sum, val) => sum + val, 0) / count;
+		const rMBE = differences.reduce((sum, d) => sum + d, 0) / (count * avgRef) * 100;
+		const rMAE = differences.reduce((sum, d) => sum + Math.abs(d), 0) / (count * avgRef) * 100;
+  		const rRMSE = Math.sqrt(differences.reduce((sum, d) => sum + d * d, 0) / count) / avgRef * 100;
 		const corr = pearsonCorrelation(refValues, forecastValues);
-
 		return { rMBE, rMAE, rRMSE, corr };
 		}
 	
@@ -317,16 +313,16 @@
 				}]
 			}
 
-			}
-			let table = {
-				weatherData: weatherData,
-				params: params,
-				rmbe: rMBE,
-				rmae: rMAE,
-				rmse: rRMSE,
-				correlation: correlation,
-			}
-			return {table: table, highcharts: highcharts}
+		}
+		let table = {
+			weatherData: weatherData,
+			params: params,
+			rmbe: rMBE,
+			rmae: rMAE,
+			rmse: rRMSE,
+			correlation: correlation,
+		}
+		return {table: table, highcharts: highcharts}
 	}
 
 	// function(params) -> return highcharts
