@@ -191,46 +191,45 @@
 		const url = "https://previous-runs-api.open-meteo.com/v1/forecast";
 		const responses = await fetchWeatherApi(url, params);
 
-		// Process first location. Add a for-loop for multiple locations or weather models
-		const response = responses[0];
+		// Attributes for timezone, location, time series (just take 1st model response for these)
+		const utcOffsetSeconds = responses[0].utcOffsetSeconds();
+		const hourly = responses[0].hourly()!;
+		const time = [...Array((Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval())].map(
+			(_, i) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds) * 1000)
+		)
+		const scores = {}
+		const series = []
 
-		// Attributes for timezone and location
-		const utcOffsetSeconds = response.utcOffsetSeconds();
-
-		const hourly = response.hourly()!;
-
-		// Note: The order of weather variables in the URL query and the indices below need to match!
-		const weatherData = {
-				time: [...Array((Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval())].map(
-					(_, i) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds) * 1000)
-				),
-				reference: (reference_model=="day0") ? hourly.variables(0)!.valuesArray()! : reference,
-				variablePreviousDay1: hourly.variables(1)!.valuesArray()!,
-				variablePreviousDay2: hourly.variables(2)!.valuesArray()!,
-				variablePreviousDay3: hourly.variables(3)!.valuesArray()!,
-				variablePreviousDay4: hourly.variables(4)!.valuesArray()!,
-				variablePreviousDay5: hourly.variables(5)!.valuesArray()!,
-				variablePreviousDay6: hourly.variables(6)!.valuesArray()!,
-				variablePreviousDay7: hourly.variables(7)!.valuesArray()!,
-		};
-
-		// Initialize arrays to hold skill scores
-		const rMBE: number[] = [];
-		const rMAE: number[] = [];
-		const rRMSE: number[] = [];
-		const correlation: number[] = [];
-
-		// Loop and fill score arrays
-		for (const key in weatherData) {
-			if (key.startsWith("variablePreviousDay")) {
-				const metrics = calculateMetrics(weatherData.reference, weatherData[key]);
+		// Loop over weather models
+		for (const [m, mod] of formParams.models.entries()) {
+			const response = responses[m];
+			const hourly = response.hourly()!;
+			if (reference_model=="day0") {
+				reference = hourly.variables(0)!.valuesArray()!  // compare each model to its day0 forecast
+			};
+			// Initialize arrays to hold skill scores
+			const rMBE: number[] = [];
+			const rMAE: number[] = [];
+			const rRMSE: number[] = [];
+			const correlation: number[] = [];
+			// Loop over previous days and fill skill scores arrays
+			for (let i = 1; i < 8; i++){
+				const metrics = calculateMetrics(reference, hourly.variables(i)!.valuesArray()!);
 				rMBE.push(metrics.rMBE);
 				rMAE.push(metrics.rMAE);
 				rRMSE.push(metrics.rRMSE);
 				correlation.push(metrics.corr);
 			}
+			// Assign skill scores arrays to scores dictionary
+			scores["rMBE_" + String(mod)] = rMBE
+			scores["rMAE_" + String(mod)] = rMAE
+			scores["rRMSE_" + String(mod)] = rRMSE
+			scores["correlation_" + String(mod)] = correlation
+			series.push({name: "rMBE_" + String(mod), data: rMBE})
+			series.push({name: "rMAE_" + String(mod), data: rMAE})
+			series.push({name: "rRMSE_" + String(mod), data: rRMSE})
+			series.push({name: "correlation_" + String(mod), data: correlation, yAxis: 1})
 		}
-
 
 		let highcharts = {
 
@@ -284,20 +283,7 @@
 				}
 			},
 
-			series: [{
-				name: 'rMBE',
-				data: rMBE
-			}, {
-				name: 'rMAE',
-				data: rMAE
-			}, {
-				name: 'rRMSE',
-				data: rRMSE
-			}, {
-				name: 'Correlation',
-				data: correlation,
-				yAxis: 1
-			}],
+			series: series,
 			responsive: {
 				rules: [{
 					condition: {
@@ -315,12 +301,8 @@
 
 		}
 		let table = {
-			weatherData: weatherData,
 			params: params,
-			rmbe: rMBE,
-			rmae: rMAE,
-			rmse: rRMSE,
-			correlation: correlation,
+			scores: scores,
 		}
 		return {table: table, highcharts: highcharts}
 	}
