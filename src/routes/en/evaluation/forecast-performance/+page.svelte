@@ -2,17 +2,17 @@
 	import { fade } from 'svelte/transition';
 	import { fetchWeatherApi } from 'openmeteo';
 	import { slide } from 'svelte/transition';
-
-	import Mailbox from '$lib/assets/icons/mailbox.svelte';
+	import * as Alert from '$lib/components/ui/alert';
 
 	import Button from '$lib/components/ui/button/button.svelte';
+	import InfoCircle from 'lucide-svelte/icons/info';
+	import ArrowClockwise from 'lucide-svelte/icons/refresh-cw';
 
 	import { onMount } from 'svelte';
 	import { countVariables } from '$lib/utils/meteo';
 	import { urlHashStore } from '$lib/stores/url-hash-store';
 	import { Input } from '$lib/components/ui/input';
 	import LocationSelection from '$lib/components/location/location-selection.svelte';
-	import ResultPreview from '$lib/components/highcharts/result-preview.svelte';
 	import LicenseSelector from '$lib/components/license/license-selector.svelte';
 	import DatePicker from '$lib/components/date/date-picker.svelte';
 	import Settings from '$lib/components/settings/settings.svelte';
@@ -20,8 +20,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import * as Accordion from '$lib/components/ui/accordion';
 	import AccordionItem from '$lib/components/accordion/accordion-item.svelte';
-	import * as Select from '$lib/components/ui/select';
-	import * as ToggleGroup from '$lib/components/ui/toggle-group';
+
 	import {
 		hourly,
 		models,
@@ -29,23 +28,22 @@
 		windVariables,
 		defaultParameters,
 		additionalVariables,
-		referenceDatasets,
-		skillScores
+		referenceDatasets
 	} from './options';
 	import {
 		pastHoursOptions,
 		forecastHoursOptions,
 		gridCellSelectionOptions,
-		temporalResolutionOptions,
+		temporalResolutionOptions
 	} from '../options';
-	import HighchartsContainer from '$lib/components/highcharts/highcharts-container.svelte';
+	import Results from './Results.svelte';
 
 	let d = new Date();
 	d.setDate(d.getDate() - 2);
 	let endDateDefault = d.toISOString().split('T')[0];
 	d.setDate(d.getDate() - 14);
 	let startDateDefault = d.toISOString().split('T')[0];
-	
+
 	const params = urlHashStore({
 		latitude: [52.52],
 		longitude: [13.41],
@@ -126,8 +124,8 @@
 			(Math.sqrt(differences.reduce((sum, d) => sum + d * d, 0) / count) / avgRef) * 100;
 		const corr = pearsonCorrelation(refValues, forecastValues);
 		return { rMBE, rMAE, rRMSE, corr };
-		}
-	
+	}
+
 	function pearsonCorrelation(x: number[], y: number[]): number {
 		const n = x.length;
 		const meanX = x.reduce((a, b) => a + b, 0) / n;
@@ -146,12 +144,11 @@
 		}
 
 		return numerator / Math.sqrt(denomX * denomY);
-		}
+	}
 
-
-	async function load(formParams: Parameters) {
-		const variable = formParams.hourly
-		const reference_model = formParams.reference
+	async function fetchData(formParams: Parameters) {
+		const variable = formParams.hourly;
+		const reference_model = formParams.reference;
 
 		var reference = [];
 		if (reference_model != 'day0') {
@@ -200,7 +197,6 @@
 			(_, i) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds) * 1000)
 		);
 		const scores = {};
-		const series = [];
 
 		// Loop over weather models
 		for (const [m, mod] of formParams.models.entries()) {
@@ -223,94 +219,34 @@
 				correlation.push(metrics.corr);
 			}
 			// Assign skill scores arrays to scores dictionary
-			scores["rMBE_" + String(mod)] = rMBE
-			scores["rMAE_" + String(mod)] = rMAE
-			scores["rRMSE_" + String(mod)] = rRMSE
-			scores["correlation_" + String(mod)] = correlation
-			series.push({name: "rMBE_" + String(mod), data: rMBE})
-			series.push({name: "rMAE_" + String(mod), data: rMAE})
-			series.push({name: "rRMSE_" + String(mod), data: rRMSE})
-			series.push({name: "correlation_" + String(mod), data: correlation, yAxis: 1})
+			scores['rmbe_' + String(mod)] = rMBE;
+			scores['rmae_' + String(mod)] = rMAE;
+			scores['rrmse_' + String(mod)] = rRMSE;
+			scores['correlation_' + String(mod)] = correlation;
 		}
 
-		let highcharts = {
-
-			title: {
-				text: 'Forecast performance at ' + formParams.latitude + '°, ' + formParams.longitude + '°',
-				align: 'left'
-			},
-
-			subtitle: {
-				text: 'Models performance comparison at different lead times from ' + formParams.start_date +' to '+ formParams.end_date,
-				align: 'left'
-			},
-
-			yAxis: [{
-				title: {
-					text: 'Skill score (%)'
-				},
-				// min: 0,
-				// max: 100
-			},
-			{
-				title: {
-					text: 'Correlation'
-				},
-				// min: 0,
-				max: 1,
-				opposite: true
-			}],
-
-			xAxis: {
-				title: {
-					text: 'Previous days'
-				},
-				accessibility: {
-					rangeDescription: 'Previous days'
-				}
-			},
-
-			legend: {
-				layout: 'vertical',
-				align: 'right',
-				verticalAlign: 'middle'
-			},
-
-			plotOptions: {
-				series: {
-					label: {
-						connectorAllowed: false
-					},
-					pointStart: 1
-				}
-			},
-
-			series: series,
-			responsive: {
-				rules: [{
-					condition: {
-						maxWidth: 500
-					},
-					chartOptions: {
-						legend: {
-							layout: 'horizontal',
-							align: 'center',
-							verticalAlign: 'bottom'
-						}
-					}
-				}]
-			}
-
-		}
-		let table = {
-			params: params,
-			scores: scores,
-		}
-		return {table: table, highcharts: highcharts}
+		return { params: params, scores: scores };
 	}
 
-	// function(params) -> return highcharts
-	let result = $derived((load)($params));
+	let result: Promise<any> = $state(Promise.resolve(null));
+
+	async function load() {
+		return await fetchData($params);
+	}
+
+	function reset() {
+		result = Promise.resolve(null);
+	}
+
+	function reload() {
+		result = load();
+	}
+
+	onMount(() => {
+		reload();
+	});
+
+	params.subscribe(reset);
 </script>
 
 <svelte:head>
@@ -322,7 +258,7 @@
 <div class="container my-12">
 	<!-- LOCATION -->
 	<LocationSelection bind:params={$params} />
-	
+
 	<!-- TIME -->
 	<div class="mt-6 flex flex-col gap-4 lg:flex-row">
 		<div class="mb-3 lg:w-1/2">
@@ -532,7 +468,7 @@
 											return item !== e.value;
 										});
 									} else {
-										$params.models.push(e.value);
+										$params.models?.push(e.value);
 										$params.models = $params.models;
 									}
 								}}
@@ -594,45 +530,6 @@
 		</div>
 	</div>
 
-	<!-- SKILL SCORES -->
-	<div class="mt-6 md:mt-12">
-		<h2 id="skill-scores" class="text-2xl md:text-3xl">Skill scores</h2>
-		<div
-			class="mt-2 grid grid-flow-row gap-x-2 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
-		>
-			{#each skillScores as group}
-				<div>
-					{#each group as e}
-						<div class="group flex items-center" title={e.label}>
-							<Checkbox
-								id="{e.value}_skill"
-								class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
-								value={e.value}
-								checked={$params.models?.includes(e.value)}
-								aria-labelledby="{e.value}_label"
-								onCheckedChange={() => {
-									// if ($params.models?.includes(e.value)) {
-									// 	$params.models = $params.models.filter((item) => {
-									// 		return item !== e.value;
-									// 	});
-									// } else {
-									// 	$params.models.push(e.value);
-									// 	$params.models = $params.models;
-									// }
-								}}
-							/>
-							<Label
-								id="{e.value}_skill_label"
-								for="{e.value}_skill"
-								class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
-							>
-						</div>
-					{/each}
-				</div>
-			{/each}
-		</div>
-	</div>
-
 	<!-- SETTINGS -->
 	<div class="mt-6 md:mt-12">
 		<Settings bind:params={$params} />
@@ -644,13 +541,36 @@
 	<!-- RESULT -->
 	<div class="mt-6 md:mt-12">
 		{#await result}
-		loading
+			loading
 		{:then result}
-		<HighchartsContainer options={result.highcharts}></HighchartsContainer>
-		<pre>{JSON.stringify(result, null, 2)}</pre>
+			{#if result}
+				<Results data={result}></Results>
+			{:else}
+				<div in:fade style="min-height: 400px" class="-mx-6 relative md:mx-0">
+					<div transition:fade={{ duration: 300 }} style="min-height: 400px">
+						<div
+							class="border-border border rounded-lg absolute top-0 flex h-full w-full px-6 items-center justify-center"
+						>
+							<Alert.Root class="border-border my-auto w-[unset] md:!pl-8">
+								<Alert.Description>
+									<div class="flex items-center flex-col md:flex-row justify-center gap-2">
+										<div class="text-muted-foreground flex items-center">
+											<InfoCircle class="mr-2" />
+											Parameters have changed.
+										</div>
+
+										<Button variant="ghost" type="submit" class="flex !flex-row" onclick={reload}
+											><ArrowClockwise class="mr-1" />Reload Chart
+										</Button>
+									</div>
+								</Alert.Description>
+							</Alert.Root>
+						</div>
+					</div>
+				</div>
+			{/if}
 		{:catch error}
-		Error: {error}
+			Error: {error}
 		{/await}
 	</div>
 </div>
-

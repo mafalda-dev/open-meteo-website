@@ -41,4 +41,6 @@ export interface Parameters {
 	language?: string;
 
 	countryCode?: string;
+
+	reference?: string;
 }

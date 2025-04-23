@@ -164,13 +164,4 @@ export const referenceDatasets = [
 	]
 ];
 
-export const skillScores = [
-	[
-		{ value: 'rmbe', label: 'rMBE (%)' },
-		{ value: 'rmae', label: 'rMAE (%)' },
-		{ value: 'rrmse', label: 'rRMSE (%)' },
-		{ value: 'r2', label: 'Correlation' },
-	]
-];
-
 export const forecastDaysOptions = [{ value: '1', label: '1 day (default)' }];

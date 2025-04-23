@@ -6,11 +6,12 @@
 
 	import './highcharts.css';
 
-	export let useStockChart = false;
-	export let options: any;
-	export let style = 'height: 400px';
-	let clazz = 'w-full';
-	export { clazz as class };
+	let {
+		options,
+		useStockChart = false,
+		style = 'height: 400px',
+		class: clazz = 'w-full'
+	} = $props();
 
 	let node: HTMLElement;
 	let chart: any;
@@ -51,6 +52,15 @@
 		} else {
 			chart = new Highcharts.Chart(node, options);
 		}
+	});
+
+	$effect(() => {
+		// Note: `options` must be accessed to enable state tracking
+		let option2 = options;
+		if (!chart) {
+			return;
+		}
+		chart.update(option2, true, true);
 	});
 
 	onDestroy(() => {
