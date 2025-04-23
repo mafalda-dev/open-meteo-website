@@ -22,19 +22,6 @@ export const defaultParameters = {
 	precipitation_unit: 'mm'
 };
 
-export const pressureVariables = [
-	{ value: 'temperature', label: 'Temperature' },
-	{ value: 'relative_humidity', label: 'Relative Humidity' },
-	{ value: 'cloud_cover', label: 'Cloud cover' },
-	{ value: 'wind_speed', label: 'Wind Speed' },
-	{ value: 'wind_direction', label: 'Wind Direction' },
-	{ value: 'geopotential_height', label: 'Geopotential Height' }
-];
-
-export const levels = [
-	30, 50, 70, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 850, 900, 925, 950, 975, 1000
-].reverse();
-
 export const hourly = [
 	[
 		{ value: 'temperature_2m', label: 'Temperature (2 m)' },

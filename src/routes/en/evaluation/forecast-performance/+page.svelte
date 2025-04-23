@@ -1,13 +1,5 @@
 <script lang="ts">
-	import Zap from 'lucide-svelte/icons/zap';
-	import Gauge from 'lucide-svelte/icons/gauge';
-	import Watch from 'lucide-svelte/icons/watch';
-	import Waves from 'lucide-svelte/icons/waves';
-	import Archive from 'lucide-svelte/icons/archive';
-	import Lightbulb from 'lucide-svelte/icons/lightbulb';
-	import FileCheck from 'lucide-svelte/icons/file-check';
-	import MapPinned from 'lucide-svelte/icons/map-pinned';
-	import MountainSnow from 'lucide-svelte/icons/mountain-snow';
+	import { fade } from 'svelte/transition';
 	import { fetchWeatherApi } from 'openmeteo';
 	import { slide } from 'svelte/transition';
 
@@ -16,12 +8,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 
 	import { onMount } from 'svelte';
-	import {
-		countVariables,
-		sliceIntoChunks,
-		countPressureVariables,
-		altitudeAboveSeaLevelMeters
-	} from '$lib/utils/meteo';
+	import { countVariables } from '$lib/utils/meteo';
 	import { urlHashStore } from '$lib/stores/url-hash-store';
 	import { Input } from '$lib/components/ui/input';
 	import LocationSelection from '$lib/components/location/location-selection.svelte';
@@ -41,7 +28,6 @@
 		solarVariables,
 		windVariables,
 		defaultParameters,
-		pressureVariables,
 		additionalVariables,
 		referenceDatasets,
 		skillScores
@@ -67,7 +53,7 @@
 		end_date: endDateDefault,
 		...defaultParameters,
 		hourly: ['temperature_2m'],
-		reference: ["day0"],
+		reference: 'day0'
 	});
 
 	let begin_date = new Date('2024-01-01');
@@ -107,13 +93,14 @@
 		) {
 			accordionValues.push('solar-variables');
 		}
-
 	});
 
 	function calculateMetrics(reference: Record<string, number>, forecast: Record<string, number>) {
 		const keys = Object.keys(reference);
 
-		let refValues: number[] = [], forecastValues: number[] = [], differences: number[] = [];
+		let refValues: number[] = [],
+			forecastValues: number[] = [],
+			differences: number[] = [];
 
 		for (const key of keys) {
 			const ref = reference[key];
@@ -133,9 +120,10 @@
 			return { rMBE: NaN, rMAE: NaN, rRMSE: NaN, corr: NaN };
 		}
 		const avgRef = refValues.reduce((sum, val) => sum + val, 0) / count;
-		const rMBE = differences.reduce((sum, d) => sum + d, 0) / (count * avgRef) * 100;
-		const rMAE = differences.reduce((sum, d) => sum + Math.abs(d), 0) / (count * avgRef) * 100;
-  		const rRMSE = Math.sqrt(differences.reduce((sum, d) => sum + d * d, 0) / count) / avgRef * 100;
+		const rMBE = (differences.reduce((sum, d) => sum + d, 0) / (count * avgRef)) * 100;
+		const rMAE = (differences.reduce((sum, d) => sum + Math.abs(d), 0) / (count * avgRef)) * 100;
+		const rRMSE =
+			(Math.sqrt(differences.reduce((sum, d) => sum + d * d, 0) / count) / avgRef) * 100;
 		const corr = pearsonCorrelation(refValues, forecastValues);
 		return { rMBE, rMAE, rRMSE, corr };
 		}
@@ -165,55 +153,69 @@
 		const variable = formParams.hourly
 		const reference_model = formParams.reference
 
-		var reference = []
-		if (reference_model!="day0") {
+		var reference = [];
+		if (reference_model != 'day0') {
 			const params = {
-				"latitude": formParams.latitude,
-				"longitude": formParams.longitude,
-				"hourly": variable,
-				"models": reference_model,
-				"start_date": formParams.start_date,
-				"end_date": formParams.end_date,
+				latitude: formParams.latitude,
+				longitude: formParams.longitude,
+				hourly: variable,
+				models: reference_model,
+				start_date: formParams.start_date,
+				end_date: formParams.end_date
 			};
-			const url = (reference_model == "era5_seamless") ? "https://archive-api.open-meteo.com/v1/archive" : "https://satellite-api.open-meteo.com/v1/archive";
+			const url =
+				reference_model == 'era5_seamless'
+					? 'https://archive-api.open-meteo.com/v1/archive'
+					: 'https://satellite-api.open-meteo.com/v1/archive';
 			const responses = await fetchWeatherApi(url, params);
-			reference = responses[0].hourly()!.variables(0)!.valuesArray()!
+			reference = responses[0].hourly()!.variables(0)!.valuesArray()!;
 		}
 
 		const params = {
-			"latitude": formParams.latitude,
-			"longitude": formParams.longitude,
-			"hourly": [variable, variable+"_previous_day1", variable+"_previous_day2", variable+"_previous_day3", variable+"_previous_day4", variable+"_previous_day5", variable+"_previous_day6", variable+"_previous_day7"],
-			"models": formParams.models,
-			"start_date": formParams.start_date,
-			"end_date": formParams.end_date,
+			latitude: formParams.latitude,
+			longitude: formParams.longitude,
+			hourly: [
+				variable,
+				variable + '_previous_day1',
+				variable + '_previous_day2',
+				variable + '_previous_day3',
+				variable + '_previous_day4',
+				variable + '_previous_day5',
+				variable + '_previous_day6',
+				variable + '_previous_day7'
+			],
+			models: formParams.models,
+			start_date: formParams.start_date,
+			end_date: formParams.end_date
 		};
-		const url = "https://previous-runs-api.open-meteo.com/v1/forecast";
+		const url = 'https://previous-runs-api.open-meteo.com/v1/forecast';
 		const responses = await fetchWeatherApi(url, params);
 
 		// Attributes for timezone, location, time series (just take 1st model response for these)
 		const utcOffsetSeconds = responses[0].utcOffsetSeconds();
 		const hourly = responses[0].hourly()!;
-		const time = [...Array((Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval())].map(
+		const time = [
+			...Array((Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval())
+		].map(
 			(_, i) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds) * 1000)
-		)
-		const scores = {}
-		const series = []
+		);
+		const scores = {};
+		const series = [];
 
 		// Loop over weather models
 		for (const [m, mod] of formParams.models.entries()) {
 			const response = responses[m];
 			const hourly = response.hourly()!;
-			if (reference_model=="day0") {
-				reference = hourly.variables(0)!.valuesArray()!  // compare each model to its day0 forecast
-			};
+			if (reference_model == 'day0') {
+				reference = hourly.variables(0)!.valuesArray()!; // compare each model to its day0 forecast
+			}
 			// Initialize arrays to hold skill scores
 			const rMBE: number[] = [];
 			const rMAE: number[] = [];
 			const rRMSE: number[] = [];
 			const correlation: number[] = [];
 			// Loop over previous days and fill skill scores arrays
-			for (let i = 1; i < 8; i++){
+			for (let i = 1; i < 8; i++) {
 				const metrics = calculateMetrics(reference, hourly.variables(i)!.valuesArray()!);
 				rMBE.push(metrics.rMBE);
 				rMAE.push(metrics.rMAE);
@@ -314,10 +316,7 @@
 <svelte:head>
 	<title>⚡️ Forecast performance | Open-Meteo.com</title>
 	<link rel="canonical" href="https://open-meteo.com/en/evaluation/forecast-performance" />
-	<meta
-		name="description"
-		content=""
-	/>
+	<meta name="description" content="" />
 </svelte:head>
 
 <div class="container my-12">
@@ -550,9 +549,8 @@
 		</div>
 		<div>
 			<small class="text-muted-foreground"
-				>Note: The default <mark>Best Match</mark> provides the best forecast for any given
-				location worldwide. <mark>Seamless</mark> combines all models from a given provider into
-				a seamless prediction.</small
+				>Note: The default <mark>Best Match</mark> provides the best forecast for any given location
+				worldwide. <mark>Seamless</mark> combines all models from a given provider into a seamless prediction.</small
 			>
 		</div>
 	</div>
