@@ -11,30 +11,19 @@
 		const scores = data.scores;
 		const params = data.params;
 		const series = [];
-
-		for (const [s, skill_score] of skill_scores.entries()) {
-			const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
-			for (const name of matchingKeys) {
-				let yAxisNumber = skill_scores.length == 1 ? 0 : skill_score == 'correlation' ? 1 : 0;
-				series.push({ name: name, data: scores[name], yAxis: yAxisNumber });
-			}
-		}
-		return {
-			title: {
-				text: 'Forecast performance at ' + params.latitude + '°, ' + params.longitude + '°',
-				align: 'left'
-			},
-
-			subtitle: {
-				text:
-					'Models performance comparison at different lead times from ' +
-					params.start_date +
-					' to ' +
-					params.end_date,
-				align: 'left'
-			},
-
-			yAxis: [
+		let yAxis = [];
+        
+        if (skill_scores.length == 1){
+            yAxis = [{
+					title: {
+						text: skill_scores[0] == 'correlation' ? 'Correlation' : 'Skill score (%)'
+					}
+					// min: 0,
+					// max: 100
+				}]
+        }
+        else if (skill_scores.includes('correlation')){
+            yAxis = [
 				{
 					title: {
 						text: 'Skill score (%)'
@@ -50,7 +39,41 @@
 					max: 1,
 					opposite: true
 				}
-			],
+            ]
+        }        
+        else {
+            yAxis = [
+				{
+					title: {
+						text: 'Skill score (%)'
+					}
+					// min: 0,
+					// max: 100
+				}
+			]
+        }
+
+		for (const [s, skill_score] of skill_scores.entries()) {
+			const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
+			for (const name of matchingKeys) {
+				let yAxisNumber = skill_scores.length == 1 ? 0 : skill_score == 'correlation' ? 1 : 0;
+				series.push({ name: name, data: scores[name], yAxis: yAxisNumber });
+			}
+		}
+		return {
+			title: {
+				text: `Forecast performance at ${params.latitude}°N ${params.longitude}°E`
+			},
+
+			subtitle: {
+				text:
+					'Models performance comparison at different lead times from ' +
+					params.start_date +
+					' to ' +
+					params.end_date,
+			},
+
+			yAxis: yAxis,
 
 			xAxis: {
 				title: {
@@ -140,7 +163,7 @@
 		{/each}
 	</div>
 </div>
-<br> 
+<br />
 
 <HighchartsContainer options={highcharts}></HighchartsContainer>
 <pre>{JSON.stringify(data, null, 2)}</pre>
