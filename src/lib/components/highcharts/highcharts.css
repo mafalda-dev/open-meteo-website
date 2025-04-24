@@ -362,8 +362,7 @@ g.highcharts-series,
 	stroke: var(--highcharts-background-color);
 }
 
-.highcharts-a11y-markers-hidden
-	.highcharts-point:not(.highcharts-point-hover, .highcharts-a11y-marker-visible),
+.highcharts-a11y-markers-hidden .highcharts-point:not(.highcharts-point-hover, .highcharts-a11y-marker-visible),
 .highcharts-a11y-marker-hidden {
 	opacity: 0;
 }
@@ -535,7 +534,7 @@ text.highcharts-data-label {
 	stroke-width: 0;
 }
 
-.highcharts-legend-item > text {
+.highcharts-legend-item>text {
 	fill: var(--highcharts-neutral-color-80);
 	font-weight: 700;
 	font-size: 0.8em;
@@ -651,6 +650,22 @@ circle.highcharts-legend-nav-inactive {
 .highcharts-gauge-series .highcharts-dial {
 	fill: var(--highcharts-neutral-color-100);
 	stroke-width: 0;
+}
+
+.correlation .highcharts-graph {
+	stroke-dasharray: 8 4 2 4;  /* 8px solid, 4px space, 2px solid, 4px space */
+}
+
+.rmbe .highcharts-graph {
+	stroke-dasharray: 1 3;
+}
+
+.rmae .highcharts-graph {
+	stroke-dasharray: 10 12;
+}
+
+.rrmse .highcharts-graph {
+	stroke-dasharray: 10 0;
 }
 
 .highcharts-polygon-series .highcharts-graph {

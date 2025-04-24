@@ -11,6 +11,7 @@
 		const scores = data.scores;
 		const params = data.params;
 		const series = [];
+        // const markerSymbols = ['circle', 'square','diamond', 'triangle'];
 
 		// Y AXIS
 		let yAxis = [];
@@ -57,16 +58,21 @@
 		// SERIES
 		for (const [s, skill_score] of skill_scores.entries()) {
 			const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
-			for (const name of matchingKeys) {
-				let yAxisNumber = skill_scores.length == 1 ? 0 : skill_score == 'correlation' ? 1 : 0;
+            let yAxisNumber = skill_scores.length == 1 ? 0 : skill_score == 'correlation' ? 1 : 0;
+            let markerSymbol = 'triangle'
+			for (const [n, name] of matchingKeys.entries()) {
 				series.push({
+                    type: 'line',
 					name: name,
 					data: scores[name],
 					yAxis: yAxisNumber,
 					tooltip: {
 						valueDecimals: skill_score == 'correlation' ? 2 : 1,
 						valueSuffix: skill_score == 'correlation' ? '' : '%'
-					}
+					},
+                    colorIndex: n,
+                    className: skill_score,
+                    marker: {symbol: markerSymbol},
 				});
 			}
 		}
