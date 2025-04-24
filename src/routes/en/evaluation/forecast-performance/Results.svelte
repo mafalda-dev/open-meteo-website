@@ -83,10 +83,7 @@
 
 			subtitle: {
 				text:
-					'Models performance comparison at different lead times from ' +
-					params.start_date +
-					' to ' +
-					params.end_date
+					`Models performance comparison at different lead times from ${params.start_date} to ${params.end_date}. Reference: ${params.reference}.`
 			},
 
 			yAxis: yAxis,

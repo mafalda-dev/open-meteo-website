@@ -51,7 +51,7 @@
 		end_date: endDateDefault,
 		...defaultParameters,
 		hourly: ['temperature_2m'],
-		reference: 'day0'
+		reference: ['day0']
 	});
 
 	let begin_date = new Date('2024-01-01');
@@ -183,7 +183,8 @@
 			],
 			models: formParams.models,
 			start_date: formParams.start_date,
-			end_date: formParams.end_date
+			end_date: formParams.end_date,
+			reference: reference_model
 		};
 		const url = 'https://previous-runs-api.open-meteo.com/v1/forecast';
 		const responses = await fetchWeatherApi(url, params);
@@ -513,7 +514,7 @@
 											return item !== e.value;
 										});
 									} else {
-										$params.reference.push(e.value);
+										$params.reference?.push(e.value);
 										$params.reference = $params.reference;
 									}
 								}}
@@ -541,7 +542,10 @@
 	<!-- RESULT -->
 	<div class="mt-6 md:mt-12">
 		{#await result}
-			loading
+		<div class="text-muted-foreground flex items-center">
+			<InfoCircle class="mr-2" />
+			Loading...
+		</div>
 		{:then result}
 			{#if result}
 				<Results data={result}></Results>
