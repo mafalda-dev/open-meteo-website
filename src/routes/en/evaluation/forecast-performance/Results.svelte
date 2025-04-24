@@ -11,19 +11,21 @@
 		const scores = data.scores;
 		const params = data.params;
 		const series = [];
+
+		// Y AXIS
 		let yAxis = [];
-        
-        if (skill_scores.length == 1){
-            yAxis = [{
+		if (skill_scores.length == 1) {
+			yAxis = [
+				{
 					title: {
 						text: skill_scores[0] == 'correlation' ? 'Correlation' : 'Skill score (%)'
 					}
 					// min: 0,
 					// max: 100
-				}]
-        }
-        else if (skill_scores.includes('correlation')){
-            yAxis = [
+				}
+			];
+		} else if (skill_scores.includes('correlation')) {
+			yAxis = [
 				{
 					title: {
 						text: 'Skill score (%)'
@@ -39,10 +41,9 @@
 					max: 1,
 					opposite: true
 				}
-            ]
-        }        
-        else {
-            yAxis = [
+			];
+		} else {
+			yAxis = [
 				{
 					title: {
 						text: 'Skill score (%)'
@@ -50,14 +51,23 @@
 					// min: 0,
 					// max: 100
 				}
-			]
-        }
+			];
+		}
 
+		// SERIES
 		for (const [s, skill_score] of skill_scores.entries()) {
 			const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
 			for (const name of matchingKeys) {
 				let yAxisNumber = skill_scores.length == 1 ? 0 : skill_score == 'correlation' ? 1 : 0;
-				series.push({ name: name, data: scores[name], yAxis: yAxisNumber });
+				series.push({
+					name: name,
+					data: scores[name],
+					yAxis: yAxisNumber,
+					tooltip: {
+						valueDecimals: skill_score == 'correlation' ? 2 : 1,
+						valueSuffix: skill_score == 'correlation' ? '' : '%'
+					}
+				});
 			}
 		}
 		return {
@@ -70,7 +80,7 @@
 					'Models performance comparison at different lead times from ' +
 					params.start_date +
 					' to ' +
-					params.end_date,
+					params.end_date
 			},
 
 			yAxis: yAxis,
@@ -92,11 +102,12 @@
 
 			plotOptions: {
 				series: {
-					label: {
-						connectorAllowed: false
-					},
 					pointStart: 1
 				}
+			},
+
+			tooltip: {
+				shared: true
 			},
 
 			series: series,
