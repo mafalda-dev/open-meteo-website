@@ -88,7 +88,8 @@
 				},
 				accessibility: {
 					rangeDescription: 'Previous days'
-				}
+				},
+                min: params.reference == "day0" ? 1 : 0
 			},
 
 			legend: {
@@ -99,7 +100,7 @@
 
 			plotOptions: {
 				series: {
-					pointStart: 1
+					pointStart: 0
 				}
 			},
 
@@ -139,16 +140,17 @@
 	for (const { value: skill } of skillScores) {
 		const table: Table = {};
 
-		// Initialize rows 1 to 7
-		for (let i = 0; i < 7; i++) {
-			table[i + 1] = {}; // rows will be 1-indexed
+		// Initialize rows 0 to 7 or 1 to 7 (if reference is day0)
+        let start_index = params.reference == "day0" ? 1 : 0
+		for (let i = start_index; i < 8; i++) {
+			table[i] = {}; // rows will be 1-indexed
 		}
 		for (const key in scores) {
 			if (key.startsWith(skill)) {
 				const model = key.replace(`${skill}_`, '');
-				const values = scores[key];
+				const values = scores[key].slice(start_index);
 				values.forEach((value, index) => {
-					table[index + 1][model] = value ?? null;
+					table[index + start_index][model] = value ?? null;
 				});
 			}
 		}

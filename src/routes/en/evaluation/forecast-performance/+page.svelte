@@ -212,7 +212,7 @@
 			const rRMSE: number[] = [];
 			const correlation: number[] = [];
 			// Loop over previous days and fill skill scores arrays
-			for (let i = 1; i < 8; i++) {
+			for (let i = 0; i < 8; i++) {
 				const metrics = calculateMetrics(reference, hourly.variables(i)!.valuesArray()!);
 				rMBE.push(metrics.rMBE);
 				rMAE.push(metrics.rMAE);
