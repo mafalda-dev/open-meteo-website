@@ -8,14 +8,14 @@
 
 	let skill_scores = $state(['correlation']);
 
-    let skillScores = [
+	let skillScores = [
 		{ value: 'rmbe', label: 'rMBE (%)' },
 		{ value: 'rmae', label: 'rMAE (%)' },
 		{ value: 'rrmse', label: 'rRMSE (%)' },
 		{ value: 'correlation', label: 'Correlation' }
 	];
 
-    const skillLabels = Object.fromEntries(skillScores.map(({ value, label }) => [value, label]));
+	const skillLabels = Object.fromEntries(skillScores.map(({ value, label }) => [value, label]));
 	const referenceLabels = Object.fromEntries(
 		referenceDatasets[0].map(({ value, table_label }) => [value, table_label])
 	);
@@ -176,6 +176,44 @@
 		scoresTables[skill] = table;
 	}
 
+	// COLOR CODE FOR TABLE
+	function getCellColorClass(skill: string, value: number | null): string {
+		if (value === null) return '';
+
+		const poor = `background-color: #ffff7f; color: black`;
+		const good = `background-color: #74d600; color: black`; // 'bg-green-100 text-black';
+		const excellent = `background-color: #028900; color: black`;
+
+		switch (skill) {
+			case 'rmbe':
+				if (value == null || isNaN(value)) return '';
+				if (Math.abs(value) <= 5) return excellent;
+				if (Math.abs(value) <= 10) return good;
+				return poor;
+
+			case 'rmae':
+				if (value == null || isNaN(value)) return '';
+				if (value <= 15) return excellent;
+				if (value <= 30) return good;
+				return poor;
+
+			case 'rrmse':
+				if (value == null || isNaN(value)) return '';
+				if (value <= 15) return excellent;
+				if (value <= 30) return good;
+				return poor;
+
+			case 'correlation':
+				if (value == null || isNaN(value)) return '';
+				if (value > 0.95) return excellent;
+				if (value > 0.9) return good;
+				return poor;
+
+			default:
+				return '';
+		}
+	}
+
 	//$inspect(highcharts)
 </script>
 
@@ -253,8 +291,11 @@
 						{#each Object.entries(table) as [rowIndex, row]}
 							<tr>
 								<td class="border border-gray-300 p-2">{rowIndex}</td>
-								{#each Object.values(row) as value}
-									<td class="border border-gray-300 p-2 text-center">
+								{#each Object.values(row) as value, index}
+									<td
+										class="border border-gray-300 p-2 text-center"
+										style={getCellColorClass(skill, value)}
+									>
 										{value === null || isNaN(value)
 											? '--'
 											: value.toFixed(skill === 'correlation' ? 2 : 1)}
