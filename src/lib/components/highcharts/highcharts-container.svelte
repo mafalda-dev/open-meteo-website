@@ -32,15 +32,16 @@
 			Debugger.compose(Highcharts.Chart);
 		}
 		//HighchartsAccessibility(Highcharts);
-		options.chart = options.chart || {};
-		options.chart.styledMode = true;
-		options.lang = {
+		let options2 = {...options}
+		options2.chart = options.chart || {};
+		options2.chart.styledMode = true;
+		options2.lang = {
 			locale: 'en-GB'
 		};
-		options.accessibility = {
+		options2.accessibility = {
 			enabled: false
 		};
-		options.credits = {
+		options2.credits = {
 			text: 'Open-Meteo.com',
 			href: 'http://open-meteo.com'
 		};
@@ -48,9 +49,9 @@
 			// const HighchartsStock = await import('highcharts/modules/stock');
 			// HighchartsStock.default(Highcharts);
 			// chart = new Highcharts.StockChart(node, options);
-			chart = new Highcharts.StockChart(node, options);
+			chart = new Highcharts.StockChart(node, options2);
 		} else {
-			chart = new Highcharts.Chart(node, options);
+			chart = new Highcharts.Chart(node, options2);
 		}
 	});
 

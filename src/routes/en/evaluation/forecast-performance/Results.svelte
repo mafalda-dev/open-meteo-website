@@ -30,51 +30,30 @@
 		// const markerSymbols = ['circle', 'square','diamond', 'triangle'];
 
 		// Y AXIS
-		let yAxis = [];
-		if (skill_scores.length == 1) {
-			yAxis = [
-				{
-					title: {
-						text: skill_scores[0] == 'correlation' ? 'Correlation' : 'Skill score (%)'
-					}
-					// min: 0,
-					// max: 100
+		let yAxis = [
+			{
+				id: 0,
+				title: {
+					text: (skill_scores.length == 1 && skill_scores[0] == 'correlation') ? '' : 'Skill score (%)'
 				}
-			];
-		} else if (skill_scores.includes('correlation')) {
-			yAxis = [
-				{
-					title: {
-						text: 'Skill score (%)'
-					}
-					// min: 0,
-					// max: 100
+				// min: 0,
+				// max: 100
+			},
+			{
+				id: 1,
+				title: {
+					text: 'Correlation'
 				},
-				{
-					title: {
-						text: 'Correlation'
-					},
-					// min: 0,
-					max: 1,
-					opposite: true
-				}
-			];
-		} else {
-			yAxis = [
-				{
-					title: {
-						text: 'Skill score (%)'
-					}
-					// min: 0,
-					// max: 100
-				}
-			];
-		}
+				// min: 0,
+				max: 1,
+				opposite: true
+			}
+		];
 
 		// SERIES
 		for (const [s, skill_score] of skill_scores.entries()) {
 			const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
-			let yAxisNumber = skill_scores.length == 1 ? 0 : skill_score == 'correlation' ? 1 : 0;
+			let yAxisNumber = skill_score == 'correlation' ? 1 : 0;
 			let markerSymbol = 'triangle';
 			for (const [n, name] of matchingKeys.entries()) {
 				series.push({
@@ -256,7 +235,7 @@
 <HighchartsContainer options={highcharts}></HighchartsContainer>
 <!-- <pre>{JSON.stringify(data, null, 2)}</pre> -->
 <!-- <pre>{JSON.stringify(highcharts, null, 2)}</pre> -->
-<!-- <pre>{JSON.stringify(tables, null, 2)}</pre> -->
+<!-- <pre>{JSON.stringify(scores_table, null, 2)}</pre> -->
 
 <!-- SCORES TABLE -->
 <div class="mt-6 w-full md:mt-12">
