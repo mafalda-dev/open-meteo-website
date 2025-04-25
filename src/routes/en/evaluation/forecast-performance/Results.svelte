@@ -8,9 +8,23 @@
 
 	let skill_scores = $state(['correlation']);
 
+    let skillScores = [
+		{ value: 'rmbe', label: 'rMBE (%)' },
+		{ value: 'rmae', label: 'rMAE (%)' },
+		{ value: 'rrmse', label: 'rRMSE (%)' },
+		{ value: 'correlation', label: 'Correlation' }
+	];
+
+    const skillLabels = Object.fromEntries(skillScores.map(({ value, label }) => [value, label]));
+	const referenceLabels = Object.fromEntries(
+		referenceDatasets[0].map(({ value, table_label }) => [value, table_label])
+	);
+	const modelLabels = Object.fromEntries(models.flat().map(({ value, label }) => [value, label]));
+
 	const scores = data.scores;
 	const params = data.params;
 
+	// HIGHCHARTS
 	let highcharts = $derived.by(() => {
 		const series = [];
 		// const markerSymbols = ['circle', 'square','diamond', 'triangle'];
@@ -134,19 +148,7 @@
 		};
 	});
 
-	let skillScores = [
-		{ value: 'rmbe', label: 'rMBE (%)' },
-		{ value: 'rmae', label: 'rMAE (%)' },
-		{ value: 'rrmse', label: 'rRMSE (%)' },
-		{ value: 'correlation', label: 'Correlation' }
-	];
-
-	const skillLabels = Object.fromEntries(skillScores.map(({ value, label }) => [value, label]));
-	const referenceLabels = Object.fromEntries(
-		referenceDatasets[0].map(({ value, table_label }) => [value, table_label])
-	);
-	const modelLabels = Object.fromEntries(models.flat().map(({ value, label }) => [value, label]));
-
+	// SCORES TABLE
 	type Table = {
 		[rowIndex: number]: {
 			[model: string]: number | null;
