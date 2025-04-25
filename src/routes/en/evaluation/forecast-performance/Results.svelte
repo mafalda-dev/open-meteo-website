@@ -9,10 +9,10 @@
 	let skill_scores = $state(['correlation']);
 
 	let skillScores = [
+        { value: 'correlation', label: 'Correlation' },
 		{ value: 'rmbe', label: 'rMBE (%)' },
 		{ value: 'rmae', label: 'rMAE (%)' },
-		{ value: 'rrmse', label: 'rRMSE (%)' },
-		{ value: 'correlation', label: 'Correlation' }
+		{ value: 'rrmse', label: 'rRMSE (%)' }
 	];
 
 	const skillLabels = Object.fromEntries(skillScores.map(({ value, label }) => [value, label]));
