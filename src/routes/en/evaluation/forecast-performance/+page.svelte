@@ -542,10 +542,10 @@
 	<!-- RESULT -->
 	<div class="mt-6 md:mt-12">
 		{#await result}
-		<div class="text-muted-foreground flex items-center">
-			<InfoCircle class="mr-2" />
-			Loading...
-		</div>
+			<div class="text-muted-foreground flex items-center">
+				<InfoCircle class="mr-2" />
+				Loading...
+			</div>
 		{:then result}
 			{#if result}
 				<Results data={result}></Results>
@@ -577,4 +577,5 @@
 			Error: {error}
 		{/await}
 	</div>
+
 </div>

@@ -158,9 +158,9 @@ export const models = [
 
 export const referenceDatasets = [
 	[
-		{ value: 'day0', label: 'Day 0 Forecast' },
-		{ value: 'era5_seamless', label: 'ERA5-Seamless' },
-		{ value: 'satellite_radiation_seamless', label: 'Satellite automatic selection (radiation variables only)' },
+		{ value: 'day0', label: 'Day 0 Forecast', table_label: 'Day 0 Forecast' },
+		{ value: 'era5_seamless', label: 'ERA5-Seamless', table_label: 'ERA5 Seamless' },
+		{ value: 'satellite_radiation_seamless', label: 'Satellite automatic selection (radiation variables only)', table_label: 'Satellite data' },
 	]
 ];
 
