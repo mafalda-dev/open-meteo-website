@@ -172,14 +172,14 @@
 
 			case 'rmae':
 				if (value == null || isNaN(value)) return '';
-				if (value <= 15) return excellent;
-				if (value <= 30) return good;
+				if (value <= 10) return excellent;
+				if (value <= 20) return good;
 				return poor;
 
 			case 'rrmse':
 				if (value == null || isNaN(value)) return '';
 				if (value <= 15) return excellent;
-				if (value <= 30) return good;
+				if (value <= 25) return good;
 				return poor;
 
 			case 'correlation':
