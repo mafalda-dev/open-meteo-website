@@ -12,11 +12,11 @@
 	let skill_scores = $state(['correlation']);
 
 	let skillScores = [
+		...(hssVariables.includes(params.hourly[0]) ? [{ value: 'hss', label: 'HSS' }] : []),
 		{ value: 'correlation', label: 'Correlation' },
 		{ value: 'rmbe', label: 'rMBE (%)' },
 		{ value: 'rmae', label: 'rMAE (%)' },
-		{ value: 'rrmse', label: 'rRMSE (%)' },
-		...(hssVariables.includes(params.hourly[0]) ? [{ value: 'hss', label: 'HSS' }] : [])
+		{ value: 'rrmse', label: 'rRMSE (%)' }
 	];
 
 	const skillLabels = Object.fromEntries(skillScores.map(({ value, label }) => [value, label]));
@@ -24,6 +24,12 @@
 		referenceDatasets[0].map(({ value, table_label }) => [value, table_label])
 	);
 	const modelLabels = Object.fromEntries(models.flat().map(({ value, label }) => [value, label]));
+	const scoresPrimAxis = ['rmbe', 'rmae', 'rrmse'];
+	const scoresSecAxis = ['correlation', 'hss'];
+	function getLabels(subset: string[], axis: string[]): string {
+		const filtered = subset.filter((value) => axis.includes(value));
+		return filtered.length ? filtered.map((value) => skillLabels[value]).join(', ') : '';
+	}
 
 	// HIGHCHARTS
 	let highcharts = $derived.by(() => {
@@ -35,8 +41,7 @@
 			{
 				id: 0,
 				title: {
-					text:
-						skill_scores.length == 1 && skill_scores[0] == 'correlation' ? '' : 'Skill score (%)'
+					text: getLabels(skill_scores, scoresPrimAxis)
 				}
 				// min: 0,
 				// max: 100
@@ -44,7 +49,7 @@
 			{
 				id: 1,
 				title: {
-					text: 'Correlation'
+					text: getLabels(skill_scores, scoresSecAxis)
 				},
 				// min: 0,
 				max: 1,
@@ -55,17 +60,18 @@
 		// SERIES
 		for (const [s, skill_score] of skill_scores.entries()) {
 			const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
-			let yAxisNumber = skill_score == 'correlation' ? 1 : 0;
+			let yAxisNumber = scoresSecAxis.includes(skill_score) ? 1 : 0;
 			let markerSymbol = 'triangle';
 			for (const [n, name] of matchingKeys.entries()) {
 				series.push({
+                    id: name,
 					type: 'line',
 					name: name,
 					data: scores[name],
 					yAxis: yAxisNumber,
 					tooltip: {
-						valueDecimals: skill_score == 'correlation' ? 2 : 1,
-						valueSuffix: skill_score == 'correlation' ? '' : '%'
+						valueDecimals: scoresSecAxis.includes(skill_score) ? 2 : 1,
+						valueSuffix: scoresSecAxis.includes(skill_score) ? '' : '%'
 					},
 					colorIndex: n,
 					className: skill_score,
@@ -287,7 +293,7 @@
 									>
 										{value === null || isNaN(value)
 											? '--'
-											: value.toFixed(skill === 'correlation' ? 2 : 1)}
+											: value.toFixed(scoresSecAxis.includes(skill) ? 2 : 1)}
 									</td>
 								{/each}
 							</tr>

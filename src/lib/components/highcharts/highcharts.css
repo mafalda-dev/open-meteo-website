@@ -656,6 +656,10 @@ circle.highcharts-legend-nav-inactive {
 	stroke-dasharray: 8 4 2 4;  /* 8px solid, 4px space, 2px solid, 4px space */
 }
 
+.hss .highcharts-graph {
+	stroke-dasharray: 12 3;  /* 8px solid, 4px space, 2px solid, 4px space */
+}
+
 .rmbe .highcharts-graph {
 	stroke-dasharray: 1 3;
 }
