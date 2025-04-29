@@ -27,8 +27,8 @@
 		solarVariables,
 		windVariables,
 		defaultParameters,
-		additionalVariables,
-		referenceDatasets
+		referenceDatasets,
+		hssVariables
 	} from './options';
 	import {
 		pastHoursOptions,
@@ -73,14 +73,14 @@
 	let accordionValues: string[] = $state([]);
 	onMount(() => {
 		if (
-			(countVariables(additionalVariables, $params.hourly).active ||
+			(countVariables(windVariables, $params.hourly).active ||
 				(pastHours ? pastHours.value : false) ||
 				(cellSelection ? cellSelection.value : false) ||
 				(forecastHours ? forecastHours.value : false) ||
 				(temporalResolution ? temporalResolution.value : false)) &&
-			!accordionValues.includes('additional-variables')
+			!accordionValues.includes('wind-variables')
 		) {
-			accordionValues.push('additional-variables');
+			accordionValues.push('wind-variables');
 		}
 
 		if (
@@ -93,12 +93,21 @@
 		}
 	});
 
-	function calculateMetrics(reference: Record<string, number>, forecast: Record<string, number>) {
+	function calculateMetrics(
+		reference: Record<string, number>,
+		forecast: Record<string, number>,
+		calculateHss: boolean
+	) {
 		const keys = Object.keys(reference);
 
 		let refValues: number[] = [],
 			forecastValues: number[] = [],
 			differences: number[] = [];
+
+		let a = 0,
+			b = 0,
+			c = 0,
+			d = 0; // confusion matrix counts for Heidke skill score
 
 		for (const key of keys) {
 			const ref = reference[key];
@@ -112,10 +121,21 @@
 			differences.push(diff);
 			refValues.push(ref);
 			forecastValues.push(pred);
+
+			if (calculateHss) {
+				// For HSS — assumes binary inputs: 1 (event), 0 (no event)
+				const refBin = ref >= 0.5 ? 1 : 0; // adjust threshold if needed
+				const predBin = pred >= 0.5 ? 1 : 0;
+
+				if (refBin === 1 && predBin === 1) a++;
+				else if (refBin === 0 && predBin === 1) b++;
+				else if (refBin === 1 && predBin === 0) c++;
+				else if (refBin === 0 && predBin === 0) d++;
+			}
 		}
 		const count = differences.length;
 		if (count === 0) {
-			return { rMBE: NaN, rMAE: NaN, rRMSE: NaN, corr: NaN };
+			return { rMBE: NaN, rMAE: NaN, rRMSE: NaN, corr: NaN, HSS: NaN };
 		}
 		const avgRef = refValues.reduce((sum, val) => sum + val, 0) / count;
 		const rMBE = (differences.reduce((sum, d) => sum + d, 0) / (count * avgRef)) * 100;
@@ -123,7 +143,12 @@
 		const rRMSE =
 			(Math.sqrt(differences.reduce((sum, d) => sum + d * d, 0) / count) / avgRef) * 100;
 		const corr = pearsonCorrelation(refValues, forecastValues);
-		return { rMBE, rMAE, rRMSE, corr };
+		let HSS = NaN;
+		if (calculateHss) {
+			const denom = (a + c) * (c + d) + (a + b) * (b + d);
+			HSS = denom === 0 ? NaN : (2 * (a * d - b * c)) / denom;
+		}
+		return { rMBE, rMAE, rRMSE, corr, HSS };
 	}
 
 	function pearsonCorrelation(x: number[], y: number[]): number {
@@ -147,7 +172,7 @@
 	}
 
 	async function fetchData(formParams: Parameters) {
-		const variable = formParams.hourly;
+		const variable = formParams.hourly[0];
 		const reference_model = formParams.reference;
 
 		var reference = [];
@@ -198,6 +223,7 @@
 			(_, i) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds) * 1000)
 		);
 		const scores = {};
+		const calculateHss = hssVariables.includes(params.hourly[0]) ? true : false;
 
 		// Loop over weather models
 		for (const [m, mod] of formParams.models.entries()) {
@@ -211,19 +237,27 @@
 			const rMAE: number[] = [];
 			const rRMSE: number[] = [];
 			const correlation: number[] = [];
+			const hss: number[] = [];
+
 			// Loop over previous days and fill skill scores arrays
 			for (let i = 0; i < 8; i++) {
-				const metrics = calculateMetrics(reference, hourly.variables(i)!.valuesArray()!);
+				const metrics = calculateMetrics(
+					reference,
+					hourly.variables(i)!.valuesArray()!,
+					calculateHss
+				);
 				rMBE.push(metrics.rMBE);
 				rMAE.push(metrics.rMAE);
 				rRMSE.push(metrics.rRMSE);
 				correlation.push(metrics.corr);
+				hss.push(metrics.HSS);
 			}
 			// Assign skill scores arrays to scores dictionary
 			scores['rmbe_' + String(mod)] = rMBE;
 			scores['rmae_' + String(mod)] = rMAE;
 			scores['rrmse_' + String(mod)] = rRMSE;
 			scores['correlation_' + String(mod)] = correlation;
+			scores['hss_' + String(mod)] = hss;
 		}
 
 		return { params: params, scores: scores };
@@ -577,5 +611,4 @@
 			Error: {error}
 		{/await}
 	</div>
-
 </div>

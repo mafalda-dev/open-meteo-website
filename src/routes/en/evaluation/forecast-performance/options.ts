@@ -22,6 +22,8 @@ export const defaultParameters = {
 	precipitation_unit: 'mm'
 };
 
+export const hssVariables = ['precipitation', 'rain', 'showers', 'snowfall'];
+
 export const hourly = [
 	[
 		{ value: 'temperature_2m', label: 'Temperature (2 m)' },
@@ -29,7 +31,7 @@ export const hourly = [
 		{ value: 'dew_point_2m', label: 'Dewpoint (2 m)' },
 		{ value: 'apparent_temperature', label: 'Apparent Temperature' },
 		{ value: 'precipitation', label: 'Precipitation (rain + showers + snow)' },
-		
+
 	],
 	[
 		{ value: 'rain', label: 'Rain' },
@@ -44,28 +46,6 @@ export const hourly = [
 		{ value: 'wind_speed_10m', label: 'Wind Speed (10 m)' },
 		{ value: 'wind_direction_10m', label: 'Wind Direction (10 m)' },
 	],
-];
-
-export const additionalVariables = [
-	[
-		{ value: 'uv_index', label: 'UV Index' },
-		{ value: 'uv_index_clear_sky', label: 'UV Index Clear Sky' },
-		{ value: 'is_day', label: 'Is Day or Night' },
-		{ value: 'sunshine_duration', label: 'Sunshine Duration' },
-		{ value: 'wet_bulb_temperature_2m', label: 'Wet Bulb Temperature (2 m)' },
-		{
-			value: 'total_column_integrated_water_vapour',
-			label: 'Total Column Integrated Water Vapour'
-		}
-	],
-	[
-		{ value: 'cape', label: 'CAPE' },
-		{ value: 'lifted_index', label: 'Lifted Index' },
-		{ value: 'convective_inhibition', label: 'Convective Inhibition' },
-		{ value: 'freezing_level_height', label: 'Freezing Level Height' },
-		{ value: 'boundary_layer_height', label: 'Boundary Layer Height PBL' },
-		{ value: 'hail', label: 'Hail (only Met Office UK 2km)' }
-	]
 ];
 
 export const solarVariables = [

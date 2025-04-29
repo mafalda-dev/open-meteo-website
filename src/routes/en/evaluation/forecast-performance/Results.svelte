@@ -2,17 +2,21 @@
 	import HighchartsContainer from '$lib/components/highcharts/highcharts-container.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Label } from '$lib/components/ui/label';
-	import { models, referenceDatasets } from './options';
+	import { models, referenceDatasets, hssVariables } from './options';
 
 	let { data } = $props();
+
+	const scores = data.scores;
+	const params = data.params;
 
 	let skill_scores = $state(['correlation']);
 
 	let skillScores = [
-        { value: 'correlation', label: 'Correlation' },
+		{ value: 'correlation', label: 'Correlation' },
 		{ value: 'rmbe', label: 'rMBE (%)' },
 		{ value: 'rmae', label: 'rMAE (%)' },
-		{ value: 'rrmse', label: 'rRMSE (%)' }
+		{ value: 'rrmse', label: 'rRMSE (%)' },
+		...(hssVariables.includes(params.hourly[0]) ? [{ value: 'hss', label: 'HSS' }] : [])
 	];
 
 	const skillLabels = Object.fromEntries(skillScores.map(({ value, label }) => [value, label]));
@@ -20,9 +24,6 @@
 		referenceDatasets[0].map(({ value, table_label }) => [value, table_label])
 	);
 	const modelLabels = Object.fromEntries(models.flat().map(({ value, label }) => [value, label]));
-
-	const scores = data.scores;
-	const params = data.params;
 
 	// HIGHCHARTS
 	let highcharts = $derived.by(() => {
@@ -34,7 +35,8 @@
 			{
 				id: 0,
 				title: {
-					text: (skill_scores.length == 1 && skill_scores[0] == 'correlation') ? '' : 'Skill score (%)'
+					text:
+						skill_scores.length == 1 && skill_scores[0] == 'correlation' ? '' : 'Skill score (%)'
 				}
 				// min: 0,
 				// max: 100
@@ -89,7 +91,7 @@
 				accessibility: {
 					rangeDescription: 'Previous days'
 				},
-                min: params.reference == "day0" ? 1 : 0
+				min: params.reference == 'day0' ? 1 : 0
 			},
 
 			legend: {
@@ -141,7 +143,7 @@
 		const table: Table = {};
 
 		// Initialize rows 0 to 7 or 1 to 7 (if reference is day0)
-        let start_index = params.reference == "day0" ? 1 : 0
+		let start_index = params.reference == 'day0' ? 1 : 0;
 		for (let i = start_index; i < 8; i++) {
 			table[i] = {}; // rows will be 1-indexed
 		}
@@ -188,6 +190,12 @@
 				if (value == null || isNaN(value)) return '';
 				if (value > 0.95) return excellent;
 				if (value > 0.9) return good;
+				return poor;
+
+			case 'hss':
+				if (value == null || isNaN(value)) return '';
+				if (value > 0.9) return excellent;
+				if (value > 0) return good;
 				return poor;
 
 			default:
@@ -237,7 +245,7 @@
 <HighchartsContainer options={highcharts}></HighchartsContainer>
 <!-- <pre>{JSON.stringify(data, null, 2)}</pre> -->
 <!-- <pre>{JSON.stringify(highcharts, null, 2)}</pre> -->
-<!-- <pre>{JSON.stringify(scores_table, null, 2)}</pre> -->
+<!-- <pre>{JSON.stringify(scoresTables, null, 2)}</pre> -->
 
 <!-- SCORES TABLE -->
 <div class="mt-6 w-full md:mt-12">
