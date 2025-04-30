@@ -42,5 +42,6 @@ export interface Parameters {
 
 	countryCode?: string;
 
-	reference?: Array<string>;
+	variable?: string;
+	reference?: string;
 }

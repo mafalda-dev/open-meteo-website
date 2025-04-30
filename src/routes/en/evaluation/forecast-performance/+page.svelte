@@ -17,12 +17,14 @@
 	import DatePicker from '$lib/components/date/date-picker.svelte';
 	import Settings from '$lib/components/settings/settings.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox';
+	import RadioGroup from '$lib/components/ui/radio-group/radio-group.svelte';
+	import RadioGroupItem from '$lib/components/ui/radio-group/radio-group-item.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import * as Accordion from '$lib/components/ui/accordion';
 	import AccordionItem from '$lib/components/accordion/accordion-item.svelte';
 
 	import {
-		hourly,
+		variables,
 		models,
 		solarVariables,
 		windVariables,
@@ -50,48 +52,16 @@
 		start_date: startDateDefault,
 		end_date: endDateDefault,
 		...defaultParameters,
-		hourly: ['temperature_2m'],
-		reference: ['day0']
+		variable: 'temperature_2m',
+		reference: 'day0'
 	});
 
 	let begin_date = new Date('2024-01-01');
 	let last_date = new Date();
 	last_date.setDate(last_date.getDate() - 2);
 
-	// Additional variable settings
-	let forecastHours = $derived(
-		forecastHoursOptions.find((fho) => String(fho.value) == $params.forecast_hours)
-	);
-	let pastHours = $derived(pastHoursOptions.find((pho) => String(pho.value) == $params.past_hours));
-	let temporalResolution = $derived(
-		temporalResolutionOptions.find((tro) => String(tro.value) == $params.temporal_resolution)
-	);
-	let cellSelection = $derived(
-		gridCellSelectionOptions.find((gcso) => String(gcso.value) == $params.cell_selection)
-	);
-
 	let accordionValues: string[] = $state([]);
-	onMount(() => {
-		if (
-			(countVariables(windVariables, $params.hourly).active ||
-				(pastHours ? pastHours.value : false) ||
-				(cellSelection ? cellSelection.value : false) ||
-				(forecastHours ? forecastHours.value : false) ||
-				(temporalResolution ? temporalResolution.value : false)) &&
-			!accordionValues.includes('wind-variables')
-		) {
-			accordionValues.push('wind-variables');
-		}
-
-		if (
-			(countVariables(solarVariables, $params.hourly).active ||
-				($params.tilt ? $params.tilt > 0 : false) ||
-				($params.azimuth ? $params.azimuth > 0 : false)) &&
-			!accordionValues.includes('solar-variables')
-		) {
-			accordionValues.push('solar-variables');
-		}
-	});
+	// onMount(() => {});
 
 	function calculateMetrics(
 		reference: Record<string, number>,
@@ -172,7 +142,7 @@
 	}
 
 	async function fetchData(formParams: Parameters) {
-		const variable = formParams.hourly[0];
+		const variable = formParams.variable;
 		const reference_model = formParams.reference;
 
 		var reference = [];
@@ -180,7 +150,7 @@
 			const params = {
 				latitude: formParams.latitude,
 				longitude: formParams.longitude,
-				hourly: variable,
+				hourly: [variable],
 				models: reference_model,
 				start_date: formParams.start_date,
 				end_date: formParams.end_date
@@ -312,71 +282,19 @@
 		<div
 			class="mt-2 grid grid-flow-row gap-x-2 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
 		>
-			{#each hourly as group}
-				<div>
-					{#each group as e}
-						<div class="group flex items-center" title={e.label}>
-							<Checkbox
-								id="{e.value}_hourly"
-								class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
-								value={e.value}
-								checked={$params.hourly?.includes(e.value)}
-								aria-labelledby="{e.value}_label"
-								onCheckedChange={() => {
-									if ($params.hourly?.includes(e.value)) {
-										$params.hourly = $params.hourly.filter((item) => {
-											return item !== e.value;
-										});
-									} else {
-										$params.hourly.push(e.value);
-										$params.hourly = $params.hourly;
-									}
-								}}
-							/>
-							<Label
-								id="{e.value}_label"
-								for="{e.value}_hourly"
-								class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
-							>
-						</div>
-					{/each}
-				</div>
-			{/each}
-		</div>
-	</div>
-
-	<!-- ADDITIONAL VARIABLES -->
-	<div class="mt-6">
-		<Accordion.Root class="border-border rounded-lg border" bind:value={accordionValues}>
-			<AccordionItem
-				id="solar-variables"
-				title="Solar Radiation Variables"
-				count={countVariables(solarVariables, $params.hourly)}
-			>
-				<div class="grid md:grid-cols-2">
-					{#each solarVariables as group}
+			<RadioGroup name="variable" bind:value={$params.variable}>
+				<div class="flex items-center space-x-2">
+					{#each variables as group}
 						<div>
 							{#each group as e}
 								<div class="group flex items-center" title={e.label}>
-									<Checkbox
+									<RadioGroupItem
 										id="{e.value}_hourly"
 										class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
 										value={e.value}
-										checked={$params.hourly?.includes(e.value)}
-										aria-labelledby="{e.value}_hourly_label"
-										onCheckedChange={() => {
-											if ($params.hourly?.includes(e.value)) {
-												$params.hourly = $params.hourly.filter((item) => {
-													return item !== e.value;
-												});
-											} else {
-												$params.hourly.push(e.value);
-												$params.hourly = $params.hourly;
-											}
-										}}
 									/>
 									<Label
-										id="{e.value}_hourly_label"
+										id="{e.value}_label"
 										for="{e.value}_hourly"
 										class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
 									>
@@ -385,6 +303,36 @@
 						</div>
 					{/each}
 				</div>
+			</RadioGroup>
+		</div>
+	</div>
+
+	<!-- ADDITIONAL VARIABLES -->
+	<div class="mt-6">
+		<Accordion.Root class="border-border rounded-lg border" bind:value={accordionValues}>
+			<AccordionItem id="solar-variables" title="Solar Radiation Variables">
+				<RadioGroup name="solar-variables" bind:value={$params.variable}>
+					<div class="flex items-center space-x-2">
+						{#each solarVariables as group}
+							<div>
+								{#each group as e}
+									<div class="group flex items-center" title={e.label}>
+										<RadioGroupItem
+											id="{e.value}_hourly"
+											class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
+											value={e.value}
+										/>
+										<Label
+											id="{e.value}_hourly_label"
+											for="{e.value}_hourly"
+											class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
+										>
+									</div>
+								{/each}
+							</div>
+						{/each}
+					</div>
+				</RadioGroup>
 
 				<small class="text-muted-foreground mt-1">
 					Note: Solar radiation is averaged over the past hour. Use
@@ -440,43 +388,29 @@
 					</div>
 				</div>
 			</AccordionItem>
-			<AccordionItem
-				id="wind-variables"
-				title="Wind at 80, 120 and 180 meters"
-				count={countVariables(windVariables, $params.hourly)}
-			>
-				<div class="grid md:grid-cols-2">
-					{#each windVariables as group}
-						<div>
-							{#each group as e}
-								<div class="group flex items-center" title={e.label}>
-									<Checkbox
-										id="{e.value}_hourly"
-										class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
-										value={e.value}
-										checked={$params.hourly?.includes(e.value)}
-										aria-labelledby="{e.value}_hourly_label"
-										onCheckedChange={() => {
-											if ($params.hourly?.includes(e.value)) {
-												$params.hourly = $params.hourly.filter((item) => {
-													return item !== e.value;
-												});
-											} else {
-												$params.hourly.push(e.value);
-												$params.hourly = $params.hourly;
-											}
-										}}
-									/>
-									<Label
-										id="{e.value}_hourly_label"
-										for="{e.value}_hourly"
-										class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
-									>
-								</div>
-							{/each}
-						</div>
-					{/each}
-				</div>
+			<AccordionItem id="wind-variables" title="Wind at 80, 120 and 180 meters">
+				<RadioGroup name="wind-variables" bind:value={$params.variable}>
+					<div class="flex items-center space-x-2">
+						{#each windVariables as group}
+							<div>
+								{#each group as e}
+									<div class="group flex items-center" title={e.label}>
+										<RadioGroupItem
+											id="{e.value}_hourly"
+											class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
+											value={e.value}
+										/>
+										<Label
+											id="{e.value}_hourly_label"
+											for="{e.value}_hourly"
+											class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
+										>
+									</div>
+								{/each}
+							</div>
+						{/each}
+					</div>
+				</RadioGroup>
 			</AccordionItem>
 		</Accordion.Root>
 	</div>
@@ -532,36 +466,26 @@
 		<div
 			class="mt-2 grid grid-flow-row gap-x-2 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
 		>
-			{#each referenceDatasets as group}
-				<div>
-					{#each group as e}
-						<div class="group flex items-center" title={e.label}>
-							<Checkbox
-								id="{e.value}_ref"
-								class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
-								value={e.value}
-								checked={$params.reference?.includes(e.value)}
-								aria-labelledby="{e.value}_label"
-								onCheckedChange={() => {
-									if ($params.reference?.includes(e.value)) {
-										$params.reference = $params.reference.filter((item) => {
-											return item !== e.value;
-										});
-									} else {
-										$params.reference?.push(e.value);
-										$params.reference = $params.reference;
-									}
-								}}
-							/>
-							<Label
-								id="{e.value}_model_label"
-								for="{e.value}_model"
-								class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
-							>
-						</div>
-					{/each}
+			<RadioGroup name="reference" bind:value={$params.reference}>
+				<div class="flex items-center space-x-2">
+					<div>
+						{#each referenceDatasets as e}
+							<div class="group flex items-center" title={e.label}>
+								<RadioGroupItem
+									id="{e.value}_ref"
+									class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
+									value={e.value}
+								/>
+								<Label
+									id="{e.value}_model_label"
+									for="{e.value}_model"
+									class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e.label}</Label
+								>
+							</div>
+						{/each}
+					</div>
 				</div>
-			{/each}
+			</RadioGroup>
 		</div>
 	</div>
 

@@ -1,7 +1,7 @@
 export const defaultParameters = {
 	daily: [],
 	hourly: [],
-	models: [],
+	models: ['best_match'],
 	minutely_15: [],
 
 	timezone: 'UTC',
@@ -24,7 +24,7 @@ export const defaultParameters = {
 
 export const hssVariables = ['precipitation', 'rain', 'showers', 'snowfall'];
 
-export const hourly = [
+export const variables = [
 	[
 		{ value: 'temperature_2m', label: 'Temperature (2 m)' },
 		{ value: 'relative_humidity_2m', label: 'Relative Humidity (2 m)' },
@@ -137,11 +137,9 @@ export const models = [
 ];
 
 export const referenceDatasets = [
-	[
-		{ value: 'day0', label: 'Day 0 Forecast', table_label: 'Day 0 Forecast' },
-		{ value: 'era5_seamless', label: 'ERA5-Seamless', table_label: 'ERA5 Seamless' },
-		{ value: 'satellite_radiation_seamless', label: 'Satellite automatic selection (radiation variables only)', table_label: 'Satellite data' },
-	]
+	{ value: 'day0', label: 'Day 0 Forecast', table_label: 'Day 0 Forecast' },
+	{ value: 'era5_seamless', label: 'ERA5-Seamless', table_label: 'ERA5 Seamless' },
+	{ value: 'satellite_radiation_seamless', label: 'Satellite automatic selection (radiation variables only)', table_label: 'Satellite data' },
 ];
 
 export const forecastDaysOptions = [{ value: '1', label: '1 day (default)' }];

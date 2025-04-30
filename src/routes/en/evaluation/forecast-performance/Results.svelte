@@ -21,7 +21,7 @@
 
 	const skillLabels = Object.fromEntries(skillScores.map(({ value, label }) => [value, label]));
 	const referenceLabels = Object.fromEntries(
-		referenceDatasets[0].map(({ value, table_label }) => [value, table_label])
+		referenceDatasets.map(({ value, table_label }) => [value, table_label])
 	);
 	const modelLabels = Object.fromEntries(models.flat().map(({ value, label }) => [value, label]));
 	const scoresPrimAxis = ['rmbe', 'rmae', 'rrmse'];
@@ -194,8 +194,8 @@
 
 			case 'correlation':
 				if (value == null || isNaN(value)) return '';
-				if (value > 0.95) return excellent;
-				if (value > 0.9) return good;
+				if (Math.abs(value) > 0.95) return excellent;
+				if (Math.abs(value) > 0.8) return good;
 				return poor;
 
 			case 'hss':
