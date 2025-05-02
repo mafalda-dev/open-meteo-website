@@ -45,12 +45,20 @@
 	let endDateDefault = d.toISOString().split('T')[0];
 	d.setDate(d.getDate() - 14);
 	let startDateDefault = d.toISOString().split('T')[0];
+	const currentYear = d.getFullYear();
+	const years: number[] = [];
+	for (let year = 2024; year <= currentYear; year++) {
+		years.push(year);
+	}
+	const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 	const params = urlHashStore({
 		latitude: [52.52],
 		longitude: [13.41],
 		start_date: startDateDefault,
 		end_date: endDateDefault,
+		start_year: currentYear - 1,
+		end_year: currentYear - 1,
 		...defaultParameters,
 		variable: 'temperature_2m',
 		reference: 'day0'
@@ -265,14 +273,134 @@
 	<LocationSelection bind:params={$params} />
 
 	<!-- TIME -->
-	<div class="mt-6 flex flex-col gap-4 lg:flex-row">
-		<div class="mb-3 lg:w-1/2">
-			<DatePicker
-				bind:start_date={$params.start_date}
-				bind:end_date={$params.end_date}
-				{begin_date}
-				{last_date}
-			/>
+	<div class="mt-6">
+		<div class="mt-3 flex items-center gap-2">
+			<div class="text-muted-foreground">Time:</div>
+			<div class="border-border flex rounded-md border">
+				<Button
+					variant="ghost"
+					class="rounded-e-none !opacity-100 gap-1 duration-300 {$params.time_mode ===
+					'time_interval'
+						? 'bg-accent cursor-not-allowed'
+						: ''}"
+					disabled={$params.time_mode === 'time_interval'}
+					onclick={() => {
+						$params.time_mode = 'time_interval';
+					}}
+				>
+					<svg
+						class="lucide lucide-clock mr-[2px]"
+						xmlns="http://www.w3.org/2000/svg"
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="12" cy="12" r="10" />
+						<polyline points="12 6 12 12 16 14" />
+					</svg>Time interval
+				</Button>
+				<Button
+					variant="ghost"
+					class="rounded-s-none !opacity-100 gap-1 duration-300  {$params.time_mode === 'season'
+						? 'bg-accent'
+						: ''}"
+					disabled={$params.time_mode === 'season'}
+					onclick={() => {
+						$params.time_mode = 'season';
+					}}
+				>
+					<svg
+						class="lucide lucide-calendar-cog mr-[2px]"
+						xmlns="http://www.w3.org/2000/svg"
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path d="m15.2 16.9-.9-.4" />
+						<path d="m15.2 19.1-.9.4" />
+						<path d="M16 2v4" />
+						<path d="m16.9 15.2-.4-.9" />
+						<path d="m16.9 20.8-.4.9" />
+						<path d="m19.5 14.3-.4.9" />
+						<path d="m19.5 21.7-.4-.9" />
+						<path d="M21 10.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6" />
+						<path d="m21.7 16.5-.9.4" />
+						<path d="m21.7 19.5-.9-.4" />
+						<path d="M3 10h18" />
+						<path d="M8 2v4" />
+						<circle cx="18" cy="18" r="3" />
+					</svg>Season
+				</Button>
+			</div>
+		</div>
+		<div class="mt-3 md:mt-4">
+			{#if $params.time_mode === 'time_interval'}
+				<div in:fade class="flex flex-col gap-4 lg:flex-row">
+					<div class="mb-3 lg:w-1/2">
+						<DatePicker
+							bind:start_date={$params.start_date}
+							bind:end_date={$params.end_date}
+							{begin_date}
+							{last_date}
+						/>
+					</div>
+				</div>
+			{/if}
+			{#if $params.time_mode === 'season'}
+				<div class="relative flex flex-col gap-2 duration-200">
+					<Input
+						type="number"
+						class="h-12 pt-6"
+						name="Start year"
+						id="start_year"
+						step="1"
+						min="2024"
+						max={currentYear}
+						bind:value={$params.start_year}
+					/>
+					<Label
+						class="text-muted-foreground absolute left-2 top-[0.35rem] z-10 px-1 text-xs"
+						for="start_year">Start year</Label
+					>
+					{#if $params.start_year < 2024 || $params.start_year > currentYear || $params.start_year > $params.end_year}
+						<div class="absolute left-3 top-14 text-sm duration-300" transition:slide>
+							Start year must be between 2024 and the current year. Start year must be before End
+							year
+						</div>
+					{/if}
+				</div>
+				<div class="relative flex flex-col gap-2 duration-200">
+					<Input
+						type="number"
+						class="h-12 pt-6"
+						name="End year"
+						id="end_year"
+						step="1"
+						min="2024"
+						max={currentYear}
+						bind:value={$params.end_year}
+					/>
+					<Label
+						class="text-muted-foreground absolute left-2 top-[0.35rem] z-10 px-1 text-xs"
+						for="end_year">End year</Label
+					>
+					{#if $params.end_year < 2024 || $params.end_year > currentYear || $params.start_year > $params.end_year}
+						<div class="absolute left-3 top-14 text-sm duration-300" transition:slide>
+							End year must be between 2024 and the current year. End year must be after Start year
+						</div>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	</div>
 
