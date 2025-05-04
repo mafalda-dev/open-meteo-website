@@ -9,6 +9,7 @@ export const defaultParameters = {
 	csv_coordinates: undefined,
 
 	time_mode: 'time_interval',
+	past_days: '0',
 
 	cell_selection: undefined,
 	temporal_resolution: undefined,
@@ -19,7 +20,10 @@ export const defaultParameters = {
 	timeformat: 'iso8601',
 	wind_speed_unit: 'kmh',
 	temperature_unit: 'celsius',
-	precipitation_unit: 'mm'
+	precipitation_unit: 'mm',
+
+	variable: 'temperature_2m',
+	reference: 'day0',
 };
 
 export const hssVariables = ['precipitation', 'rain', 'showers', 'snowfall'];

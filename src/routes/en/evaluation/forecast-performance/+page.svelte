@@ -3,6 +3,7 @@
 	import { fetchWeatherApi } from 'openmeteo';
 	import { slide } from 'svelte/transition';
 	import * as Alert from '$lib/components/ui/alert';
+	import * as Select from '$lib/components/ui/select/index';
 
 	import Button from '$lib/components/ui/button/button.svelte';
 	import InfoCircle from 'lucide-svelte/icons/info';
@@ -51,6 +52,7 @@
 		years.push(year);
 	}
 	const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+	const previousDays = [0, 1, 2, 3, 4, 5, 6, 7];
 
 	const params = urlHashStore({
 		latitude: [52.52],
@@ -59,9 +61,7 @@
 		end_date: endDateDefault,
 		start_year: currentYear - 1,
 		end_year: currentYear - 1,
-		...defaultParameters,
-		variable: 'temperature_2m',
-		reference: 'day0'
+		...defaultParameters
 	});
 
 	let begin_date = new Date('2024-01-01');
@@ -399,6 +399,21 @@
 							End year must be between 2024 and the current year. End year must be after Start year
 						</div>
 					{/if}
+				</div>
+				<div class="relative">
+					<Select.Root name="previous_days" type="single" bind:value={$params.past_days}>
+						<Select.Trigger aria-label="Previous days" class="h-12 cursor-pointer pt-6 [&_svg]:mb-3"
+							>{$params.past_days?.toString()}</Select.Trigger
+						>
+						<Select.Content preventScroll={false} class="border-border">
+							{#each previousDays as to}
+								<Select.Item value={to.toString()}>{to}</Select.Item>
+							{/each}
+						</Select.Content>
+						<Label class="text-muted-foreground absolute left-2 top-[0.35rem] z-10 px-1 text-xs"
+							>Previous days</Label
+						>
+					</Select.Root>
 				</div>
 			{/if}
 		</div>

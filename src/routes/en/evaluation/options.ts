@@ -9,7 +9,7 @@ export const defaultParameters = {
 	location_mode: 'location_search',
 	csv_coordinates: undefined,
 
-	time_mode: 'forecast_days',
+	time_mode: 'time_interval',
 	past_days: '0',
 	forecast_days: '7',
 
