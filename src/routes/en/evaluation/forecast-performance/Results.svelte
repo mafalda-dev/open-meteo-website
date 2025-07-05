@@ -34,7 +34,32 @@
 	// HIGHCHARTS
 	let highcharts = $derived.by(() => {
 		const series = [];
+		let xAxis = {};
 		// const markerSymbols = ['circle', 'square','diamond', 'triangle'];
+
+		// X AXIS
+		if (params.time_mode == 'season') {
+			xAxis = {
+				title: {
+					text: 'Month'
+				},
+				accessibility: {
+					rangeDescription: 'Month'
+				},
+				categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+				startOnTick:true
+			};
+		} else {
+			xAxis = {
+				title: {
+					text: 'Previous days'
+				},
+				accessibility: {
+					rangeDescription: 'Previous days'
+				},
+				min: params.reference == 'day0' ? 1 : 0
+			};
+		}
 
 		// Y AXIS
 		let yAxis = [
@@ -58,25 +83,53 @@
 		];
 
 		// SERIES
-		for (const [s, skill_score] of skill_scores.entries()) {
-			const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
-			let yAxisNumber = scoresSecAxis.includes(skill_score) ? 1 : 0;
-			let markerSymbol = 'triangle';
-			for (const [n, name] of matchingKeys.entries()) {
-				series.push({
-                    id: name,
-					type: 'line',
-					name: name,
-					data: scores[name],
-					yAxis: yAxisNumber,
-					tooltip: {
-						valueDecimals: scoresSecAxis.includes(skill_score) ? 2 : 1,
-						valueSuffix: scoresSecAxis.includes(skill_score) ? '' : '%'
-					},
-					colorIndex: n,
-					className: skill_score,
-					marker: { symbol: markerSymbol }
-				});
+		if (params.time_mode == 'season') {
+			for (const [s, skill_score] of skill_scores.entries()) {
+				const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
+				let yAxisNumber = scoresSecAxis.includes(skill_score) ? 1 : 0;
+				let markerSymbol = 'triangle';
+				debugger;
+				for (const [n, name] of matchingKeys.entries()) {
+					debugger;
+					for (const [prev_day, prev_day_arr] of scores[name].entries()) {
+						series.push({
+							id: name + ' day ' + prev_day,
+							type: 'line',
+							name: name + ' day ' + prev_day,
+							data: prev_day_arr,
+							yAxis: yAxisNumber,
+							tooltip: {
+								valueDecimals: scoresSecAxis.includes(skill_score) ? 2 : 1,
+								valueSuffix: scoresSecAxis.includes(skill_score) ? '' : '%'
+							},
+							colorIndex: n,
+							className: skill_score,
+							marker: { symbol: markerSymbol }
+						});
+					}
+				}
+			}
+		} else {
+			for (const [s, skill_score] of skill_scores.entries()) {
+				const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
+				let yAxisNumber = scoresSecAxis.includes(skill_score) ? 1 : 0;
+				let markerSymbol = 'triangle';
+				for (const [n, name] of matchingKeys.entries()) {
+					series.push({
+						id: name,
+						type: 'line',
+						name: name,
+						data: scores[name],
+						yAxis: yAxisNumber,
+						tooltip: {
+							valueDecimals: scoresSecAxis.includes(skill_score) ? 2 : 1,
+							valueSuffix: scoresSecAxis.includes(skill_score) ? '' : '%'
+						},
+						colorIndex: n,
+						className: skill_score,
+						marker: { symbol: markerSymbol }
+					});
+				}
 			}
 		}
 		return {
@@ -90,15 +143,7 @@
 
 			yAxis: yAxis,
 
-			xAxis: {
-				title: {
-					text: 'Previous days'
-				},
-				accessibility: {
-					rangeDescription: 'Previous days'
-				},
-				min: params.reference == 'day0' ? 1 : 0
-			},
+			xAxis: xAxis,
 
 			legend: {
 				layout: 'vertical',

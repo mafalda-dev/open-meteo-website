@@ -150,6 +150,15 @@
 	}
 
 	async function fetchData(formParams: Parameters) {
+		let start_date = '';
+		let end_date = '';
+		if (formParams.time_mode == 'time_interval') {
+			start_date = formParams.start_date;
+			end_date = formParams.end_date;
+		} else {
+			start_date = `${formParams.start_year}-01-01`;
+			end_date = `${formParams.end_year}-12-31`;
+		}
 		const variable = formParams.variable;
 		const reference_model = formParams.reference;
 
@@ -160,8 +169,8 @@
 				longitude: formParams.longitude,
 				hourly: [variable],
 				models: reference_model,
-				start_date: formParams.start_date,
-				end_date: formParams.end_date
+				start_date: start_date,
+				end_date: end_date
 			};
 			const url =
 				reference_model == 'era5_seamless'
@@ -185,9 +194,10 @@
 				variable + '_previous_day7'
 			],
 			models: formParams.models,
-			start_date: formParams.start_date,
-			end_date: formParams.end_date,
-			reference: reference_model
+			start_date: start_date,
+			end_date: end_date,
+			reference: reference_model,
+			time_mode: formParams.time_mode
 		};
 		const url = 'https://previous-runs-api.open-meteo.com/v1/forecast';
 		const responses = await fetchWeatherApi(url, params);
@@ -219,16 +229,48 @@
 
 			// Loop over previous days and fill skill scores arrays
 			for (let i = 0; i < 8; i++) {
-				const metrics = calculateMetrics(
-					reference,
-					hourly.variables(i)!.valuesArray()!,
-					calculateHss
-				);
-				rMBE.push(metrics.rMBE);
-				rMAE.push(metrics.rMAE);
-				rRMSE.push(metrics.rRMSE);
-				correlation.push(metrics.corr);
-				hss.push(metrics.HSS);
+				let data = hourly.variables(i)!.valuesArray()!;
+				const rMBE_prevday_i: number[] = [];
+				const rMAE_prevday_i: number[] = [];
+				const rRMSE_prevday_i: number[] = [];
+				const correlation_prevday_i: number[] = [];
+				const hss_prevday_i: number[] = [];
+				if (formParams.time_mode == 'season') {
+					for (let m = 0; m < 12; m++) {
+						const filteredData = time
+							.map((dateStr, index) => ({
+								date: new Date(dateStr),
+								value: data[index]
+							}))
+							.filter(({ date }) => date.getUTCMonth() === m)
+							.map(({ value }) => value);
+						const filteredRef = time
+							.map((dateStr, index) => ({
+								date: new Date(dateStr),
+								value: reference[index]
+							}))
+							.filter(({ date }) => date.getUTCMonth() === m)
+							.map(({ value }) => value);
+						const metrics = calculateMetrics(filteredRef, filteredData, calculateHss);
+						rMBE_prevday_i.push(metrics.rMBE); // array(12)
+						rMAE_prevday_i.push(metrics.rMAE); // array(12)
+						rRMSE_prevday_i.push(metrics.rRMSE); // array(12)
+						correlation_prevday_i.push(metrics.corr); // array(12)
+						hss_prevday_i.push(metrics.HSS); // array(12)
+					}
+					rMBE.push(rMBE_prevday_i); // array(8x12)
+					rMAE.push(rMAE_prevday_i); // array(8x12)
+					rRMSE.push(rRMSE_prevday_i); // array(8x12)
+					correlation.push(correlation_prevday_i); // array(8x12)
+					hss.push(hss_prevday_i); // array(8x12)
+				} else {
+					const metrics = calculateMetrics(reference, data, calculateHss);
+					rMBE.push(metrics.rMBE);
+					rMAE.push(metrics.rMAE);
+					rRMSE.push(metrics.rRMSE);
+					correlation.push(metrics.corr);
+					hss.push(metrics.HSS);
+				}
 			}
 			// Assign skill scores arrays to scores dictionary
 			scores['rmbe_' + String(mod)] = rMBE;
@@ -238,7 +280,7 @@
 			scores['hss_' + String(mod)] = hss;
 		}
 
-		return { params: params, scores: scores };
+		return { params: params, scores: scores};
 	}
 
 	let result: Promise<any> = $state(Promise.resolve(null));
