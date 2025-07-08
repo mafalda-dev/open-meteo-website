@@ -74,5 +74,32 @@ import StockChart from 'highcharts/es-modules/Core/Chart/StockChart.js';
 G.StockChart = G.stockChart = StockChart;
 G.StockChart.compose(G.Chart, G.Axis, G.Series, G.SVGRenderer);
 
+// Custom markers
+G.SVGRenderer.prototype.symbols.cross = function (x, y, w, h) {
+    return ['M', x, y, 'L', x + w, y + h, 'M', x + w, y, 'L', x, y + h, 'z'];
+};
+G.SVGRenderer.prototype.symbols.asterisk = function (x, y, w, h) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+
+    return [
+        // vertical line
+        'M', cx, y,
+        'L', cx, y + h,
+
+        // horizontal line
+        'M', x, cy,
+        'L', x + w, cy,
+
+        // diagonal top-left to bottom-right
+        'M', x, y,
+        'L', x + w, y + h,
+
+        // diagonal top-right to bottom-left
+        'M', x + w, y,
+        'L', x, y + h
+    ];
+};
+
 // Default Export
 export default G;

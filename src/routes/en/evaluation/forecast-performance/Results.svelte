@@ -46,8 +46,21 @@
 				accessibility: {
 					rangeDescription: 'Month'
 				},
-				categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-				startOnTick:true
+				categories: [
+					'Jan',
+					'Feb',
+					'Mar',
+					'Apr',
+					'May',
+					'Jun',
+					'Jul',
+					'Aug',
+					'Sep',
+					'Oct',
+					'Nov',
+					'Dec'
+				],
+				startOnTick: true
 			};
 		} else {
 			xAxis = {
@@ -84,13 +97,20 @@
 
 		// SERIES
 		if (params.time_mode == 'season') {
+			let markerSymbols = [
+				'',
+				'triangle',
+				'circle',
+				'asterisk',
+				'diamond',
+				'triangle-down',
+				'cross',
+				'square'
+			];
 			for (const [s, skill_score] of skill_scores.entries()) {
 				const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
 				let yAxisNumber = scoresSecAxis.includes(skill_score) ? 1 : 0;
-				let markerSymbol = 'triangle';
-				debugger;
 				for (const [n, name] of matchingKeys.entries()) {
-					debugger;
 					for (const [prev_day, prev_day_arr] of scores[name].entries()) {
 						series.push({
 							id: name + ' day ' + prev_day,
@@ -104,7 +124,11 @@
 							},
 							colorIndex: n,
 							className: skill_score,
-							marker: { symbol: markerSymbol }
+							marker: {
+								enabled: prev_day ? true : false,
+								symbol: markerSymbols[prev_day],
+								radius: ['triangle', 'circle', 'square'].includes(markerSymbols[prev_day]) ? 3 : 4
+							}
 						});
 					}
 				}
