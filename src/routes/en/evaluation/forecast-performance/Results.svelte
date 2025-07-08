@@ -3,6 +3,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Label } from '$lib/components/ui/label';
 	import { models, referenceDatasets, hssVariables } from './options';
+	import * as Select from '$lib/components/ui/select/index';
 
 	let { data } = $props();
 
@@ -18,6 +19,9 @@
 		{ value: 'rmae', label: 'rMAE (%)' },
 		{ value: 'rrmse', label: 'rRMSE (%)' }
 	];
+
+	let previous_days = $state([1, 3, 5]);
+	const previousDays = [0, 1, 2, 3, 4, 5, 6, 7];
 
 	const skillLabels = Object.fromEntries(skillScores.map(({ value, label }) => [value, label]));
 	const referenceLabels = Object.fromEntries(
@@ -111,7 +115,9 @@
 				const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
 				let yAxisNumber = scoresSecAxis.includes(skill_score) ? 1 : 0;
 				for (const [n, name] of matchingKeys.entries()) {
-					for (const [prev_day, prev_day_arr] of scores[name].entries()) {
+					let selected_score = scores[name]
+					for (const prev_day of previous_days){
+						let prev_day_arr = selected_score[prev_day]
 						series.push({
 							id: name + ' day ' + prev_day,
 							type: 'line',
@@ -283,6 +289,38 @@
 
 <!-- SKILL SCORES -->
 <div class="mt-6 md:mt-12">
+	{#if params.time_mode === 'season'}
+		<h2 id="previous-days" class="text-2xl md:text-3xl">Previous days</h2>
+		<div class="mt-2 grid grid-cols-8 gap-x-2 gap-y-2">
+			{#each previousDays as e}
+				<div class="group flex items-center" title={e.toString()}>
+					<Checkbox
+						id="{e}_days"
+						class="bg-muted/50 border-border-dark cursor-pointer duration-100 group-hover:border-[currentColor]"
+						value={e.toString()}
+						checked={previous_days?.includes(e)}
+						aria-labelledby="{e}_days"
+						onCheckedChange={() => {
+							if (previous_days?.includes(e)) {
+								previous_days = previous_days.filter((item) => {
+									return item !== e;
+								});
+							} else {
+								previous_days.push(e);
+								previous_days = previous_days;
+							}
+						}}
+					/>
+					<Label
+						id="{e}_days_label"
+						for="{e}_days"
+						class="ml-[0.42rem] cursor-pointer truncate py-[0.1rem]">{e}</Label
+					>
+				</div>
+			{/each}
+		</div>
+	{/if}
+	<br />
 	<h2 id="skill-scores" class="text-2xl md:text-3xl">Skill scores</h2>
 	<div
 		class="mt-2 grid grid-flow-row gap-x-2 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
