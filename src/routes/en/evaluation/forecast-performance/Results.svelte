@@ -22,6 +22,20 @@
 
 	let previous_days = $state([1, 3, 5]);
 	const previousDays = [0, 1, 2, 3, 4, 5, 6, 7];
+	const months = [
+		'Jan',
+		'Feb',
+		'Mar',
+		'Apr',
+		'May',
+		'Jun',
+		'Jul',
+		'Aug',
+		'Sep',
+		'Oct',
+		'Nov',
+		'Dec'
+	];
 
 	const skillLabels = Object.fromEntries(skillScores.map(({ value, label }) => [value, label]));
 	const referenceLabels = Object.fromEntries(
@@ -50,20 +64,7 @@
 				accessibility: {
 					rangeDescription: 'Month'
 				},
-				categories: [
-					'Jan',
-					'Feb',
-					'Mar',
-					'Apr',
-					'May',
-					'Jun',
-					'Jul',
-					'Aug',
-					'Sep',
-					'Oct',
-					'Nov',
-					'Dec'
-				],
+				categories: months,
 				startOnTick: true
 			};
 		} else {
@@ -115,9 +116,9 @@
 				const matchingKeys = Object.keys(scores).filter((key) => key.startsWith(skill_score));
 				let yAxisNumber = scoresSecAxis.includes(skill_score) ? 1 : 0;
 				for (const [n, name] of matchingKeys.entries()) {
-					let selected_score = scores[name]
-					for (const prev_day of previous_days){
-						let prev_day_arr = selected_score[prev_day]
+					let selected_score = scores[name];
+					for (const prev_day of previous_days) {
+						let prev_day_arr = selected_score[prev_day];
 						series.push({
 							id: name + ' day ' + prev_day,
 							type: 'line',
@@ -220,24 +221,55 @@
 
 	const scoresTables: Record<string, Table> = {};
 
-	for (const { value: skill } of skillScores) {
-		const table: Table = {};
+	type TableRow = {
+		day: number;
+		model: string;
+		values: number[];
+	};
 
-		// Initialize rows 0 to 7 or 1 to 7 (if reference is day0)
-		let start_index = params.reference == 'day0' ? 1 : 0;
-		for (let i = start_index; i < 8; i++) {
-			table[i] = {}; // rows will be 1-indexed
-		}
-		for (const key in scores) {
-			if (key.startsWith(skill)) {
-				const model = key.replace(`${skill}_`, '');
-				const values = scores[key].slice(start_index);
-				values.forEach((value, index) => {
-					table[index + start_index][model] = value ?? null;
-				});
+	const scoresTableSeason: Record<string, TableRow[]> = {};
+	
+	if (params.time_mode == 'season') {
+		for (const { value: skill } of skillScores) {
+			const rows: TableRow[] = [];
+
+			for (const key in scores) {
+				if (key.startsWith(skill)) {
+					const dayArrays = scores[key]; // 7 arrays of 12 months
+					const model = key.replace(`${skill}_`, '');
+
+					dayArrays.forEach((monthVals: number[], day: number) => {
+						rows.push({
+							day,
+							model,
+							values: monthVals
+						});
+					});
+				}
+
+				scoresTableSeason[skill] = rows;
 			}
 		}
-		scoresTables[skill] = table;
+	} else {
+		for (const { value: skill } of skillScores) {
+			const table: Table = {};
+
+			// Initialize rows 0 to 7 or 1 to 7 (if reference is day0)
+			let start_index = params.reference == 'day0' ? 1 : 0;
+			for (let i = start_index; i < 8; i++) {
+				table[i] = {}; // rows will be 1-indexed
+			}
+			for (const key in scores) {
+				if (key.startsWith(skill)) {
+					const model = key.replace(`${skill}_`, '');
+					const values = scores[key].slice(start_index);
+					values.forEach((value, index) => {
+						table[index + start_index][model] = value ?? null;
+					});
+				}
+			}
+			scoresTables[skill] = table;
+		}
 	}
 
 	// COLOR CODE FOR TABLE
@@ -369,7 +401,7 @@
 			Scores are calculated respect to the selected <mark>Reference data</mark>, in this case
 			<mark>{referenceLabels[params.reference]}</mark>. A different reference can be selected.
 			Satellite data is only available for radiation variables and the dataset is selected
-			automatically based on the data avilability in the region and time period selected.
+			automatically based on the data availability in the region and time period selected.
 		</p>
 		<p>
 			Weather models cover different geographic areas at different resolutions and provide different
