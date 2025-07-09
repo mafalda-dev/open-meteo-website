@@ -275,7 +275,7 @@
 	// SUBSET TABLE DATA
 	function getTableData(skillData: TableRow[]) {
 		const grouped = [];
-		const sorted_previous_days = [...previous_days].sort((a, b) => a - b);  // because previous_days is reactive
+		const sorted_previous_days = [...previous_days].sort((a, b) => a - b); // because previous_days is reactive
 
 		for (const prev_day of sorted_previous_days) {
 			const models = skillData.filter((entry) => entry.day === prev_day);
@@ -452,7 +452,10 @@
 										{/if}
 										<td class="border border-gray-300 px-2 py-1">{row.model}</td>
 										{#each row.values as value}
-											<td class="border border-gray-300 px-2 py-1">
+											<td
+												class="border border-gray-300 px-2 py-1"
+												style={getCellColorClass(skill, value)}
+											>
 												{value !== null && value !== undefined ? value.toFixed(3) : '-'}
 											</td>
 										{/each}
