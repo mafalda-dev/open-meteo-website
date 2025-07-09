@@ -228,7 +228,7 @@
 	};
 
 	const scoresTableSeason: Record<string, TableRow[]> = {};
-	
+
 	if (params.time_mode == 'season') {
 		for (const { value: skill } of skillScores) {
 			const rows: TableRow[] = [];
@@ -270,6 +270,21 @@
 			}
 			scoresTables[skill] = table;
 		}
+	}
+
+	// SUBSET TABLE DATA
+	function getTableData(skillData: TableRow[]) {
+		const grouped = [];
+		const sorted_previous_days = [...previous_days].sort((a, b) => a - b);  // because previous_days is reactive
+
+		for (const prev_day of sorted_previous_days) {
+			const models = skillData.filter((entry) => entry.day === prev_day);
+			if (models.length > 0) {
+				grouped.push({ prev_day, rows: models });
+			}
+		}
+
+		return grouped;
 	}
 
 	// COLOR CODE FOR TABLE
@@ -390,7 +405,7 @@
 <HighchartsContainer options={highcharts}></HighchartsContainer>
 <!-- <pre>{JSON.stringify(data, null, 2)}</pre> -->
 <!-- <pre>{JSON.stringify(highcharts, null, 2)}</pre> -->
-<!-- <pre>{JSON.stringify(scoresTables, null, 2)}</pre> -->
+<!-- <pre>{JSON.stringify(scoresTableSeason, null, 2)}</pre> -->
 
 <!-- SCORES TABLE -->
 <div class="mt-6 w-full md:mt-12">
@@ -408,38 +423,80 @@
 			weather variables. From the menu <mark>Weather models</mark> you can select and compare different
 			weather models.
 		</p>
-		{#each Object.entries(scoresTables) as [skill, table]}
-			<div class="mb-6">
-				<h2 class="text-lg font-bold mb-2">{skillLabels[skill]}</h2>
-				<table class="table-auto border-collapse border border-gray-300 w-full text-sm">
-					<!-- <table class="[&_tr]:border-border mx-6 md:ml-0 lg:mx-0 mt-2 min-w-[1040px] w-full caption-bottom text-left md:mt-4 [&_td]:px-1 [&_td]:py-2 [&_th]:py-2 [&_th]:pr-2 [&_tr]:border-b"> -->
-					<thead>
-						<tr>
-							<th class="border border-gray-300 p-2">Lead days</th>
-							{#each Object.keys(table[1]) as model}
-								<th class="border border-gray-300 p-2">{modelLabels[model]}</th>
-							{/each}
-						</tr>
-					</thead>
-					<tbody class="[&_a]:text-link [&_a]:underline-offset-3 [&_a]:underline">
-						{#each Object.entries(table) as [rowIndex, row]}
+		{#if params.time_mode === 'season'}
+			{#each Object.entries(scoresTableSeason) as [skill, table]}
+				<div class="mb-6">
+					<h2 class="text-lg font-bold mb-2">{skillLabels[skill]}</h2>
+					<table class="table-auto border-collapse border border-gray-300 w-full text-sm">
+						<!-- <table class="[&_tr]:border-border mx-6 md:ml-0 lg:mx-0 mt-2 min-w-[1040px] w-full caption-bottom text-left md:mt-4 [&_td]:px-1 [&_td]:py-2 [&_th]:py-2 [&_th]:pr-2 [&_tr]:border-b"> -->
+						<thead>
 							<tr>
-								<td class="border border-gray-300 p-2">{rowIndex}</td>
-								{#each Object.values(row) as value, index}
-									<td
-										class="border border-gray-300 p-2 text-center"
-										style={getCellColorClass(skill, value)}
-									>
-										{value === null || isNaN(value)
-											? '--'
-											: value.toFixed(scoresSecAxis.includes(skill) ? 2 : 1)}
-									</td>
+								<th class="border border-gray-300 p-2">Lead days</th>
+								<th class="border border-gray-300 p-2">Model</th>
+								{#each months as month}
+									<th class="border border-gray-300 p-2 text-center">{month}</th>
 								{/each}
 							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/each}
+						</thead>
+						<tbody class="[&_a]:text-link [&_a]:underline-offset-3 [&_a]:underline">
+							{#each getTableData(table) as group}
+								{#each group.rows as row, i}
+									<tr>
+										{#if i === 0}
+											<td
+												class="border border-gray-300 px-2 py-1 align-middle"
+												rowspan={group.rows.length}
+											>
+												{group.prev_day}
+											</td>
+										{/if}
+										<td class="border border-gray-300 px-2 py-1">{row.model}</td>
+										{#each row.values as value}
+											<td class="border border-gray-300 px-2 py-1">
+												{value !== null && value !== undefined ? value.toFixed(3) : '-'}
+											</td>
+										{/each}
+									</tr>
+								{/each}
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/each}
+		{:else}
+			{#each Object.entries(scoresTables) as [skill, table]}
+				<div class="mb-6">
+					<h2 class="text-lg font-bold mb-2">{skillLabels[skill]}</h2>
+					<table class="table-auto border-collapse border border-gray-300 w-full text-sm">
+						<!-- <table class="[&_tr]:border-border mx-6 md:ml-0 lg:mx-0 mt-2 min-w-[1040px] w-full caption-bottom text-left md:mt-4 [&_td]:px-1 [&_td]:py-2 [&_th]:py-2 [&_th]:pr-2 [&_tr]:border-b"> -->
+						<thead>
+							<tr>
+								<th class="border border-gray-300 p-2">Lead days</th>
+								{#each Object.keys(table[1]) as model}
+									<th class="border border-gray-300 p-2">{modelLabels[model]}</th>
+								{/each}
+							</tr>
+						</thead>
+						<tbody class="[&_a]:text-link [&_a]:underline-offset-3 [&_a]:underline">
+							{#each Object.entries(table) as [rowIndex, row]}
+								<tr>
+									<td class="border border-gray-300 p-2">{rowIndex}</td>
+									{#each Object.values(row) as value, index}
+										<td
+											class="border border-gray-300 p-2 text-center"
+											style={getCellColorClass(skill, value)}
+										>
+											{value === null || isNaN(value)
+												? '--'
+												: value.toFixed(scoresSecAxis.includes(skill) ? 2 : 1)}
+										</td>
+									{/each}
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/each}
+		{/if}
 	</div>
 </div>
